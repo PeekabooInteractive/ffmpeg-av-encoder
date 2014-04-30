@@ -90,7 +90,7 @@ int dir_select(const   struct   dirent   *dir){
 
 uint8_t* readBytesFromFile(char* path){
 	FILE *img = fopen(path,"rb");
-	printf( "filename %s\r\n", path);
+	LOGE( "filename %s\r\n", path);
 
 	// obtain file size:
 	fseek (img , 0 , SEEK_END);
@@ -120,13 +120,13 @@ AVStream* add_stream(AVFormatContext *formatContext, AVCodec **codec,enum AVCode
 
 
 	if (!(*codec)) {
-		printf("Encode doesn't found \n");
+		LOGE("Encode doesn't found \n");
 		exit(-2);
 	}
 
 	AVStream *stream = avformat_new_stream(formatContext, *codec);
 	if (!stream) {
-		fprintf(stderr, "Could not allocate stream\n");
+		LOGE("Could not allocate stream\n");
 		exit(1);
 	}
 	stream->id = formatContext->nb_streams-1;
@@ -203,7 +203,7 @@ void open_video(AVFormatContext *oc, AVCodec *codec, AVStream *st){
 
 	ret = avcodec_open2(c, codec, NULL);
 	if (ret < 0) {
-		fprintf(stderr, "Could not open video codec: %s\n", av_err2str(ret));
+		LOGE("Could not open video codec: %s\n", av_err2str(ret));
 		exit(1);
 	}
 }
@@ -272,11 +272,11 @@ void write_video_frame(char* path,AVStream *video_st,AVFormatContext *formatCont
 
 	int ret = avcodec_encode_video2(video_st->codec, &pkt, frame, &got_output);
 	if (ret < 0) {
-		fprintf(stderr, "Error encoding frame\n");
+		LOGE("Error encoding frame\n");
 		exit(1);
 	}
 	if (got_output) {
-		printf("Write frame  (size=%5d)\n", pkt.size);
+		LOGE("Write frame  (size=%5d)\n", pkt.size);
 		write_frame(formatContext, &video_st->codec->time_base, video_st, &pkt);
 	}
 
@@ -303,13 +303,13 @@ void open_audio(AVFormatContext *oc, AVCodec *codec, AVStream *st)
 	/* allocate and init a re-usable frame */
 	audio_frame = av_frame_alloc();
 	if (!audio_frame) {
-		fprintf(stderr, "Could not allocate audio frame\n");
+		LOGE("Could not allocate audio frame\n");
 		exit(1);
 	}
 	/* open it */
 	ret = avcodec_open2(c, codec, NULL);
 	if (ret < 0) {
-		fprintf(stderr, "Could not open audio codec: %s\n", av_err2str(ret));
+		LOGE( "Could not open audio codec: %s\n", av_err2str(ret));
 		exit(1);
 	}
 	/* init signal generator */
@@ -322,7 +322,7 @@ void open_audio(AVFormatContext *oc, AVCodec *codec, AVStream *st)
 	ret = av_samples_alloc_array_and_samples(&src_samples_data, &src_samples_linesize, c->channels,
 	src_nb_samples, AV_SAMPLE_FMT_S16, 0);
 	if (ret < 0) {
-		fprintf(stderr, "Could not allocate source samples\n");
+		LOGE("Could not allocate source samples\n");
 		exit(1);
 	}
 	/* compute the number of converted samples: buffering is avoided
@@ -333,7 +333,7 @@ void open_audio(AVFormatContext *oc, AVCodec *codec, AVStream *st)
 	if (c->sample_fmt != AV_SAMPLE_FMT_S16) {
 		swr_ctx = swr_alloc();
 		if (!swr_ctx) {
-			fprintf(stderr, "Could not allocate resampler context\n");
+			LOGE("Could not allocate resampler context\n");
 			exit(1);
 		}
 		/* set options */
@@ -345,13 +345,13 @@ void open_audio(AVFormatContext *oc, AVCodec *codec, AVStream *st)
 		av_opt_set_sample_fmt(swr_ctx, "out_sample_fmt", c->sample_fmt, 0);
 		/* initialize the resampling context */
 		if ((ret = swr_init(swr_ctx)) < 0) {
-			fprintf(stderr, "Failed to initialize the resampling context\n");
+			LOGE("Failed to initialize the resampling context\n");
 			exit(1);
 		}
 		ret = av_samples_alloc_array_and_samples(&dst_samples_data, &dst_samples_linesize, c->channels,
 		max_dst_nb_samples, c->sample_fmt, 0);
 		if (ret < 0) {
-			fprintf(stderr, "Could not allocate destination samples\n");
+			LOGE("Could not allocate destination samples\n");
 			exit(1);
 		}
 	}
@@ -414,7 +414,7 @@ void write_audio_frame(AVFormatContext *oc, AVStream *st, int flush){
 		(const uint8_t **)src_samples_data, src_nb_samples);
 
 		if (ret < 0) {
-			fprintf(stderr, "Error while converting\n");
+			LOGE("Error while converting\n");
 			exit(1);
 		}
 	}
@@ -430,8 +430,8 @@ void write_audio_frame(AVFormatContext *oc, AVStream *st, int flush){
 	}
 	ret = avcodec_encode_audio2(c, &pkt, flush ? NULL : audio_frame, &got_packet);
 	if (ret < 0) {
-	fprintf(stderr, "Error encoding audio frame: %s\n", av_err2str(ret));
-	exit(1);
+		LOGE("Error encoding audio frame: %s\n", av_err2str(ret));
+		exit(1);
 	}
 	if (!got_packet) {
 		//if (flush)
@@ -440,7 +440,7 @@ void write_audio_frame(AVFormatContext *oc, AVStream *st, int flush){
 	}
 	ret = write_frame(oc, &c->time_base, st, &pkt);
 	if (ret < 0) {
-		fprintf(stderr, "Error while writing audio frame: %s\n",
+		LOGE("Error while writing audio frame: %s\n",
 		av_err2str(ret));
 		exit(1);
 	}
@@ -478,7 +478,7 @@ int create_video_from_directory(char* path,char* out_file,int in_width,int in_he
 	AVFormatContext *formatContext;
 	avformat_alloc_output_context2(&formatContext, NULL, NULL, out_file);
 	if (!formatContext) {
-		printf("Could not deduce output format from file extension: using MPEG.\n");
+		LOGE("Could not deduce output format from file extension: using MPEG.\n");
 		avformat_alloc_output_context2(&formatContext, NULL, "mpeg", out_file);
 	}
 	if (!formatContext)
@@ -516,7 +516,7 @@ int create_video_from_directory(char* path,char* out_file,int in_width,int in_he
 	if (!(format->flags & AVFMT_NOFILE)) {
 		ret = avio_open(&formatContext->pb, out_file, AVIO_FLAG_WRITE);
 		if (ret < 0) {
-			fprintf(stderr, "Could not open '%s': %s\n", out_file,
+			LOGE("Could not open '%s': %s\n", out_file,
 			av_err2str(ret));
 			return 1;
 		}
@@ -524,8 +524,7 @@ int create_video_from_directory(char* path,char* out_file,int in_width,int in_he
 
 	ret = avformat_write_header(formatContext, NULL);
 	if (ret < 0) {
-		fprintf(stderr, "Error occurred when opening output file: %s\n",
-		av_err2str(ret));
+		LOGE("Error occurred when opening output file: %s\n",av_err2str(ret));
 		return 1;
 	}
 	out_width=video_st->codec->width;
@@ -536,7 +535,7 @@ int create_video_from_directory(char* path,char* out_file,int in_width,int in_he
 
 	int dirNum = scandir(path,&pDirs,dir_select,dir_cmp);
 	if(dirNum <= 0){
-		printf( "could not open %s\r\n", path);
+		LOGE( "could not open %s\r\n", path);
 		return -1;
 	}
 
@@ -563,7 +562,7 @@ int create_video_from_directory(char* path,char* out_file,int in_width,int in_he
 
 		}
 		if(i == 500){
-			printf("500\n");
+			LOGE("500\n");
 		}
 
 	}
@@ -587,17 +586,14 @@ int create_video_from_directory(char* path,char* out_file,int in_width,int in_he
 	// free the stream
 	avformat_free_context(formatContext);
 
-	printf("FIIIIIIIIIIIN \r\n");
+	LOGE("END \r\n");
 
 	return 0;
 }
 
-int generate_vide_from_images(char* dir,char* out_file,int height,int width) {
+int generate_video_from_images(char* dir,char* out_file,int height,int width) {
 	return create_video_from_directory(dir,out_file,width,height);
 	//return EXIT_SUCCESS;
 }
 
-int hello(){
-	return 5;
-}
 
