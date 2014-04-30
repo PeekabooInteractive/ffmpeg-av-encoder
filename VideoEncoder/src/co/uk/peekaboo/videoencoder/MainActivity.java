@@ -4,6 +4,8 @@ import android.app.Activity;
 import android.app.ActionBar;
 import android.app.Fragment;
 import android.os.Bundle;
+import android.os.Debug;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -12,7 +14,21 @@ import android.view.ViewGroup;
 import android.os.Build;
 
 public class MainActivity extends Activity {
+	
+	private native int hello();
+	
+	static {
+		/*System.loadLibrary("avutil-52"); 
+		System.loadLibrary("swscale-2");
+		
+		System.loadLibrary("avcodec-55"); 
+		System.loadLibrary("avformat-55");
+		
+		System.loadLibrary("swresample-0");  
+		System.loadLibrary("avfilter-4"); */
 
+		System.loadLibrary("VideoEncoder");  
+	}
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -22,6 +38,8 @@ public class MainActivity extends Activity {
 			getFragmentManager().beginTransaction()
 					.add(R.id.container, new PlaceholderFragment()).commit();
 		}
+		int i = hello();
+		Log.i("AAAAAAA", String.valueOf(i));
 	}
 
 	@Override
