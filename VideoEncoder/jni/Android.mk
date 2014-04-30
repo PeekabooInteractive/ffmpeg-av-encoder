@@ -5,11 +5,11 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE:= libavcodec
 
-LOCAL_SRC_FILES:= lib/libavcodec-55.so
+LOCAL_SRC_FILES:= lib/libavcodec.a
 
 LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/include
 
-include $(PREBUILT_SHARED_LIBRARY)
+include $(PREBUILT_STATIC_LIBRARY)
 
 
  
@@ -18,11 +18,11 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE:= libavformat
 
-LOCAL_SRC_FILES:= lib/libavformat-55.so
+LOCAL_SRC_FILES:= lib/libavformat.a
 
 LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/include
 
-include $(PREBUILT_SHARED_LIBRARY)
+include $(PREBUILT_STATIC_LIBRARY)
 
  
 
@@ -30,11 +30,11 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE:= libswscale
 
-LOCAL_SRC_FILES:= lib/libswscale-2.so
+LOCAL_SRC_FILES:= lib/libswscale.a
 
 LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/include
 
-include $(PREBUILT_SHARED_LIBRARY)
+include $(PREBUILT_STATIC_LIBRARY)
 
  
 
@@ -42,11 +42,11 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE:= libavutil
 
-LOCAL_SRC_FILES:= lib/libavutil-52.so
+LOCAL_SRC_FILES:= lib/libavutil.a
 
 LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/include
 
-include $(PREBUILT_SHARED_LIBRARY)
+include $(PREBUILT_STATIC_LIBRARY)
 
  
 
@@ -54,34 +54,37 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE:= libavfilter
 
-LOCAL_SRC_FILES:= lib/libavfilter-4.so
+LOCAL_SRC_FILES:= lib/libavfilter.a
 
 LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/include
 
-include $(PREBUILT_SHARED_LIBRARY)
+include $(PREBUILT_STATIC_LIBRARY)
 
  
 
 include $(CLEAR_VARS)
 
-LOCAL_MODULE:= libwsresample
+LOCAL_MODULE:= libswresample
 
-LOCAL_SRC_FILES:= lib/libswresample-0.so
+LOCAL_SRC_FILES:= lib/libswresample.a
 
 LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/include
 
-include $(PREBUILT_SHARED_LIBRARY)
+include $(PREBUILT_STATIC_LIBRARY)
 
 
-
-
+#PREBUILT_SHARED_LIBRARY
+#PREBUILT_STATIC_LIBRARY
+#BUILD_STATIC_LIBRARY
 
 include $(CLEAR_VARS)
 
 LOCAL_MODULE    := VideoEncoder
 LOCAL_SRC_FILES := VideoEncoder.c
-LOCAL_LDLIBS := -llog -ljnigraphics -lz -lm
-LOCAL_SHARED_LIBRARIES := libavformat libavcodec libswscale libavutil libwsresample
+LOCAL_LDLIBS := -llog -ljnigraphics -lz -lm 
+LOCAL_SHARED_LIBRARIES := 
+LOCAL_STATIC_LIBRARIES := libavformat libavcodec libswscale libavutil libswresample libavfilter
 
 include $(BUILD_SHARED_LIBRARY)
+
 #$(call import-module,ffmpeg-2.2/android/arm)

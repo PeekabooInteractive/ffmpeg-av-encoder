@@ -584,7 +584,7 @@ int create_video_from_directory(char* path,char* out_file,int in_width,int in_he
 		avio_close(formatContext->pb);
 	}
 
-	/* free the stream */
+	// free the stream
 	avformat_free_context(formatContext);
 
 	printf("FIIIIIIIIIIIN \r\n");
@@ -592,8 +592,12 @@ int create_video_from_directory(char* path,char* out_file,int in_width,int in_he
 	return 0;
 }
 
-int main(void) {
-	create_video_from_directory("plantlamp","video.mpeg",1280,760);
-	return EXIT_SUCCESS;
+int generate_vide_from_images(char* dir,char* out_file,int height,int width) {
+	return create_video_from_directory(dir,out_file,width,height);
+	//return EXIT_SUCCESS;
+}
+
+int hello(){
+	return 5;
 }
 
