@@ -114,7 +114,7 @@ uint8_t* readBytesFromFile(char* path){
 	return inbuffer;
 }
 
-AVStream* add_stream(AVFormatContext *formatContext, AVCodec **codec,enum AVCodecID codec_id){
+AVStream* add_stream(AVFormatContext *formatContext, AVCodec **codec,enum AVCodecID codec_id,int bit_rate,int out_width,int out_height){
 
 	*codec = avcodec_find_encoder(codec_id);
 
@@ -143,10 +143,10 @@ AVStream* add_stream(AVFormatContext *formatContext, AVCodec **codec,enum AVCode
 		case AVMEDIA_TYPE_VIDEO:
 			c->codec_id = codec_id;
 			//c->bit_rate = 400000;
-			c->bit_rate = 4000000;
+			c->bit_rate = bit_rate;
 			/* Resolution must be a multiple of two. */
-			c->width = 1280;
-			c->height = 760;
+			c->width = out_width;
+			c->height = out_height;
 			/* timebase: This is the fundamental unit of time (in seconds) in terms
 			* of which frame timestamps are represented. For fixed-fps content,
 			* timebase should be 1/framerate and timestamp increments should be
@@ -467,7 +467,7 @@ void close_audio(AVFormatContext *oc, AVStream *st){
  * *********************************************************************************************************************************************
  */
 
-int create_video_from_directory(char* path,char* out_file,int in_width,int in_height){
+int create_video_from_directory(char* path,char* out_file,int in_width,int in_height,int bit_rate,int out_width,int out_height){
 	struct dirent *pDirent;
 	struct  dirent  **pDirs;
 
@@ -492,11 +492,11 @@ int create_video_from_directory(char* path,char* out_file,int in_width,int in_he
 	video_st = NULL;
 	audio_st = NULL;
 	if (format->video_codec != AV_CODEC_ID_NONE){
-		video_st = add_stream(formatContext, &video_codec, format->video_codec);
+		video_st = add_stream(formatContext, &video_codec, format->video_codec,bit_rate,out_width,out_height);
 	}
 
 	if (format->audio_codec != AV_CODEC_ID_NONE){
-		audio_st = add_stream(formatContext, &audio_codec, format->audio_codec);
+		audio_st = add_stream(formatContext, &audio_codec, format->audio_codec,bit_rate,out_width,out_height);
 	}
 
 	 /* Now that all the parameters are set, we can open the audio and
@@ -510,7 +510,7 @@ int create_video_from_directory(char* path,char* out_file,int in_width,int in_he
 	}
 
 
-	int out_width, out_height;
+	//int out_width, out_height;
 
 	int ret;
 	if (!(format->flags & AVFMT_NOFILE)) {
@@ -527,8 +527,8 @@ int create_video_from_directory(char* path,char* out_file,int in_width,int in_he
 		LOGE("Error occurred when opening output file: %s\n",av_err2str(ret));
 		return 1;
 	}
-	out_width=video_st->codec->width;
-	out_height=video_st->codec->height;
+	//out_width=video_st->codec->width;
+	//out_height=video_st->codec->height;
 
 	char* aux_path = (char*)malloc(256*sizeof(char));
 	int i = 0;
@@ -561,11 +561,13 @@ int create_video_from_directory(char* path,char* out_file,int in_width,int in_he
 			dirNum--;
 
 		}
-		if(i == 500){
+		if(i == 100){
 			LOGE("500\n");
 		}
 
 	}
+	LOGE("END ENCODE\n");
+
 	sws_freeContext(sws_context);
 	//closedir(pDirs);
 	 av_write_trailer(formatContext);
@@ -591,8 +593,8 @@ int create_video_from_directory(char* path,char* out_file,int in_width,int in_he
 	return 0;
 }
 
-int generate_video_from_images(char* dir,char* out_file,int height,int width) {
-	return create_video_from_directory(dir,out_file,width,height);
+int generate_video_from_images(char* dir,char* out_file,int in_width,int in_height,int bit_rate,int out_width,int out_height) {
+	return create_video_from_directory(dir,out_file,in_width,in_height,bit_rate,out_width,out_height);
 	//return EXIT_SUCCESS;
 }
 
