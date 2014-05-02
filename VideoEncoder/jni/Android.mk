@@ -81,9 +81,22 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE    := VideoEncoder
 LOCAL_SRC_FILES := VideoEncoder.c
-LOCAL_LDLIBS := -llog -ljnigraphics -lz -lm 
+LOCAL_LDLIBS := -llog -ljnigraphics -lz -lm  -lGLESv1_CM
 LOCAL_SHARED_LIBRARIES := 
 LOCAL_STATIC_LIBRARIES := libavformat libavcodec libswscale libavutil libswresample libavfilter
+
+include $(BUILD_SHARED_LIBRARY)
+
+
+
+
+include $(CLEAR_VARS)
+
+LOCAL_MODULE    := ImagesGenerator
+LOCAL_SRC_FILES := ImagesGenerator.c
+LOCAL_LDLIBS := -llog -lz -lm -lGLESv1_CM
+LOCAL_SHARED_LIBRARIES := 
+LOCAL_STATIC_LIBRARIES :=
 
 include $(BUILD_SHARED_LIBRARY)
 
