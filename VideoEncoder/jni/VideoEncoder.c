@@ -21,7 +21,15 @@
 #include "libavutil/opt.h"
 //#include "libavutil/channel_layout.h"
 
+/*#include <GLES2/gl2.h>
+#include <GLES2/gl2ext.h>*/
+
 #include <GLES/gl.h>
+#include <GLES/glext.h>
+
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
+#include <EGL/eglplatform.h>
 
 #include <wchar.h>
 
@@ -30,6 +38,11 @@
 #include <android/log.h>
 
 #include <pthread.h>
+
+#define DEBUG 1
+
+#define PLATFORM_ANDROID 1
+#define PLATFORM_IOS 0
 
 #define LOG_TAG "VideoEncoder"
 #define LOGI(...) __android_log_print(4, LOG_TAG, __VA_ARGS__);
@@ -40,7 +53,10 @@
 #define STREAM_FRAME_RATE 25 /* 25 images/s */
 #define STREAM_PIX_FMT AV_PIX_FMT_YUV420P /* default pix_fmt */
 
+#define BITS_PER_PIXEL 3
+
 #define INPUT_PIX_FMT AV_PIX_FMT_RGB24
+//#define INPUT_PIX_FMT AV_PIX_FMT_RGBA64
 
 static uint8_t **src_samples_data;
 static int max_dst_nb_samples;
@@ -62,6 +78,52 @@ struct SwrContext *swr_ctx = NULL;
  * *********************************************************************************************************************************************
  */
 
+void write_log(char *text,...){
+	if(DEBUG){
+#if PLATFORM_ANDROID
+		LOGI("%s",text);
+#elif PLATFORM_IOS
+#endif
+	}
+}
+
+void write_EGL_error(char* id){
+	EGLint error = eglGetError();
+	if(error != EGL_SUCCESS){
+		write_log(id);
+		//EGLint error = eglGetError();
+		if(error == EGL_NO_SURFACE){
+			write_log("EGL_NO_SURFACE");
+		}
+		else if(error == EGL_BAD_DISPLAY){
+			write_log("EGL_BAD_DISPLAY");
+		}
+		else if(error == EGL_NOT_INITIALIZED){
+			write_log("EGL_NOT_INITIALIZED");
+		}
+		else if(error == EGL_BAD_CONFIG){
+			write_log("EGL_BAD_CONFIG");
+		}
+		else if(error == EGL_BAD_NATIVE_PIXMAP){
+			write_log("EGL_BAD_NATIVE_PIXMAP");
+		}
+		else if(error == EGL_BAD_ATTRIBUTE){
+			write_log("EGL_BAD_ATTRIBUTE");
+		}
+		else if(error == EGL_BAD_ALLOC){
+			write_log("EGL_BAD_ALLOC");
+		}
+		else if(error == EGL_BAD_MATCH){
+			write_log("EGL_BAD_MATCH");
+		}
+		else if(error ==  EGL_CONTEXT_LOST ){
+			write_log(" EGL_CONTEXT_LOST ");
+		}
+		else {
+			write_log("ERROR NOT FOUND");
+		}
+	}
+}
 
 int dir_cmp(const struct dirent  **first, const struct dirent **second){
 
@@ -96,7 +158,7 @@ int dir_select(const   struct   dirent   *dir){
 
 uint8_t* readBytesFromFile(char* path){
 	FILE *img = fopen(path,"rb");
-	LOGE( "filename %s\r\n", path);
+	write_log("filename %s\r\n", path);
 
 	// obtain file size:
 	fseek (img , 0 , SEEK_END);
@@ -126,13 +188,13 @@ AVStream* add_stream(AVFormatContext *formatContext, AVCodec **codec,enum AVCode
 
 
 	if (!(*codec)) {
-		LOGE("Encode doesn't found \n");
+		write_log("Encode doesn't found \n");
 		exit(-2);
 	}
 
 	AVStream *stream = avformat_new_stream(formatContext, *codec);
 	if (!stream) {
-		LOGE("Could not allocate stream\n");
+		write_log("Could not allocate stream\n");
 		exit(1);
 	}
 	stream->id = formatContext->nb_streams-1;
@@ -209,7 +271,8 @@ void open_video(AVFormatContext *oc, AVCodec *codec, AVStream *st){
 
 	ret = avcodec_open2(c, codec, NULL);
 	if (ret < 0) {
-		LOGE("Could not open video codec: %s\n", av_err2str(ret));
+		write_log("Could not open video codec: %s\n", av_err2str(ret));
+		//write_log("Could not open video codec:\n");
 		exit(1);
 	}
 }
@@ -218,7 +281,7 @@ void open_video(AVFormatContext *oc, AVCodec *codec, AVStream *st){
 AVFrame* conver_image_to_encode(AVCodecContext* codec,uint8_t* inbuffer,int in_width,int in_height,int out_width,int out_height,struct SwsContext* sws_context){
 	//int in_width, in_height, out_width, out_height;
 
-	LOGE("Try to convert image");
+	write_log("Try to convert image");
 	//here, make sure inbuffer points to the input BGR32 data,
 	//and the input and output dimensions are set correctly.
 
@@ -234,7 +297,7 @@ AVFrame* conver_image_to_encode(AVCodecContext* codec,uint8_t* inbuffer,int in_w
 	//the input and output buffers.
 	//avpicture_alloc((AVPicture*)inpic, AV_PIX_FMT_BGR24, in_width, in_height);
 	avpicture_alloc((AVPicture*)inpic, INPUT_PIX_FMT, in_width, in_height);
-	LOGE("Fill initial image");
+	write_log("Fill initial image");
 	//avpicture_fill((AVPicture*)inpic, inbuffer, INPUT_PIX_FMT, in_width, in_height);
 
 	int i;
@@ -258,9 +321,9 @@ AVFrame* conver_image_to_encode(AVCodecContext* codec,uint8_t* inbuffer,int in_w
 	//struct SwsContext* context = sws_getContext(in_width, in_height, PIX_FMT_BGR24, out_width, out_height, codec->pix_fmt, SWS_BICUBIC, NULL, NULL, NULL);
 
 	//perform the conversion
-	LOGE("Start scale");
+	write_log("Start scale");
 	sws_scale(sws_context, (const uint8_t * const *)inpic->data, inpic->linesize, 0, in_height, outpic->data, outpic->linesize);
-	LOGE("End scale");
+	write_log("End scale");
 	av_free(inpic);
 
 
@@ -285,11 +348,12 @@ void write_video_frame_from_file(char* path,AVStream *video_st,AVFormatContext *
 
 	int ret = avcodec_encode_video2(video_st->codec, &pkt, frame, &got_output);
 	if (ret < 0) {
-		LOGE("Error encoding frame\n");
+		write_log("Error encoding frame\n");
 		exit(1);
 	}
 	if (got_output) {
 		LOGE("Write frame  (size=%5d)\n", pkt.size);
+		//write_log("Write frame  ");
 		write_frame(formatContext, &video_st->codec->time_base, video_st, &pkt);
 	}
 
@@ -311,11 +375,12 @@ void write_video_frame(uint8_t* inbuffer, AVStream *video_st,AVFormatContext *fo
 
 	int ret = avcodec_encode_video2(video_st->codec, &pkt, frame, &got_output);
 	if (ret < 0) {
-		LOGE("Error encoding frame\n");
+		write_log("Error encoding frame\n");
 		exit(1);
 	}
 	if (got_output) {
 		LOGE("Write frame  (size=%5d)\n", pkt.size);
+		//write_log("Write frame\n");
 		write_frame(formatContext, &video_st->codec->time_base, video_st, &pkt);
 	}
 
@@ -342,13 +407,14 @@ void open_audio(AVFormatContext *oc, AVCodec *codec, AVStream *st)
 	/* allocate and init a re-usable frame */
 	audio_frame = av_frame_alloc();
 	if (!audio_frame) {
-		LOGE("Could not allocate audio frame\n");
+		write_log("Could not allocate audio frame\n");
 		exit(1);
 	}
 	/* open it */
 	ret = avcodec_open2(c, codec, NULL);
 	if (ret < 0) {
-		LOGE( "Could not open audio codec: %s\n", av_err2str(ret));
+		write_log( "Could not open audio codec: %s\n", av_err2str(ret));
+		//write_log( "Could not open audio codec:\n");
 		exit(1);
 	}
 	/* init signal generator */
@@ -361,7 +427,7 @@ void open_audio(AVFormatContext *oc, AVCodec *codec, AVStream *st)
 	ret = av_samples_alloc_array_and_samples(&src_samples_data, &src_samples_linesize, c->channels,
 	src_nb_samples, AV_SAMPLE_FMT_S16, 0);
 	if (ret < 0) {
-		LOGE("Could not allocate source samples\n");
+		write_log("Could not allocate source samples\n");
 		exit(1);
 	}
 	/* compute the number of converted samples: buffering is avoided
@@ -372,7 +438,7 @@ void open_audio(AVFormatContext *oc, AVCodec *codec, AVStream *st)
 	if (c->sample_fmt != AV_SAMPLE_FMT_S16) {
 		swr_ctx = swr_alloc();
 		if (!swr_ctx) {
-			LOGE("Could not allocate resampler context\n");
+			write_log("Could not allocate resampler context\n");
 			exit(1);
 		}
 		/* set options */
@@ -384,13 +450,13 @@ void open_audio(AVFormatContext *oc, AVCodec *codec, AVStream *st)
 		av_opt_set_sample_fmt(swr_ctx, "out_sample_fmt", c->sample_fmt, 0);
 		/* initialize the resampling context */
 		if ((ret = swr_init(swr_ctx)) < 0) {
-			LOGE("Failed to initialize the resampling context\n");
+			write_log("Failed to initialize the resampling context\n");
 			exit(1);
 		}
 		ret = av_samples_alloc_array_and_samples(&dst_samples_data, &dst_samples_linesize, c->channels,
 		max_dst_nb_samples, c->sample_fmt, 0);
 		if (ret < 0) {
-			LOGE("Could not allocate destination samples\n");
+			write_log("Could not allocate destination samples\n");
 			exit(1);
 		}
 	}
@@ -453,7 +519,7 @@ void write_audio_frame(AVFormatContext *oc, AVStream *st, int flush){
 		(const uint8_t **)src_samples_data, src_nb_samples);
 
 		if (ret < 0) {
-			LOGE("Error while converting\n");
+			write_log("Error while converting\n");
 			exit(1);
 		}
 	}
@@ -469,7 +535,8 @@ void write_audio_frame(AVFormatContext *oc, AVStream *st, int flush){
 	}
 	ret = avcodec_encode_audio2(c, &pkt, flush ? NULL : audio_frame, &got_packet);
 	if (ret < 0) {
-		LOGE("Error encoding audio frame: %s\n", av_err2str(ret));
+		write_log("Error encoding audio frame: %s\n", av_err2str(ret));
+		//write_log("Error encoding audio frame\n");
 		exit(1);
 	}
 	if (!got_packet) {
@@ -479,8 +546,8 @@ void write_audio_frame(AVFormatContext *oc, AVStream *st, int flush){
 	}
 	ret = write_frame(oc, &c->time_base, st, &pkt);
 	if (ret < 0) {
-		LOGE("Error while writing audio frame: %s\n",
-		av_err2str(ret));
+		write_log("Error while writing audio frame: %s\n",av_err2str(ret));
+		//write_log("Error while writing audio frame\n");
 		exit(1);
 	}
 }
@@ -517,7 +584,7 @@ int create_video_from_directory(char* path,char* out_file,int in_width,int in_he
 	AVFormatContext *formatContext;
 	avformat_alloc_output_context2(&formatContext, NULL, NULL, out_file);
 	if (!formatContext) {
-		LOGE("Could not deduce output format from file extension: using MPEG.\n");
+		write_log("Could not deduce output format from file extension: using MPEG.\n");
 		avformat_alloc_output_context2(&formatContext, NULL, "mpeg", out_file);
 	}
 	if (!formatContext)
@@ -555,15 +622,16 @@ int create_video_from_directory(char* path,char* out_file,int in_width,int in_he
 	if (!(format->flags & AVFMT_NOFILE)) {
 		ret = avio_open(&formatContext->pb, out_file, AVIO_FLAG_WRITE);
 		if (ret < 0) {
-			LOGE("Could not open '%s': %s\n", out_file,
-			av_err2str(ret));
+			write_log("Could not open '%s': %s\n", out_file,av_err2str(ret));
+			//write_log("Could not open\n");
 			return 1;
 		}
 	}
 
 	ret = avformat_write_header(formatContext, NULL);
 	if (ret < 0) {
-		LOGE("Error occurred when opening output file: %s\n",av_err2str(ret));
+		write_log("Error occurred when opening output file: %s\n",av_err2str(ret));
+		//write_log("Error occurred when opening output file");
 		return 1;
 	}
 	//out_width=video_st->codec->width;
@@ -574,7 +642,8 @@ int create_video_from_directory(char* path,char* out_file,int in_width,int in_he
 
 	int dirNum = scandir(path,&pDirs,dir_select,dir_cmp);
 	if(dirNum <= 0){
-		LOGE( "could not open %s\r\n", path);
+		write_log( "could not open %s\r\n", path);
+		//write_log( "could not open");
 		return -1;
 	}
 
@@ -603,11 +672,11 @@ int create_video_from_directory(char* path,char* out_file,int in_width,int in_he
 
 		}
 		if(i == 100){
-			LOGE("500\n");
+			write_log("500\n");
 		}
 
 	}
-	LOGE("END ENCODE\n");
+	write_log("END ENCODE\n");
 
 	sws_freeContext(sws_context);
 	//closedir(pDirs);
@@ -630,7 +699,7 @@ int create_video_from_directory(char* path,char* out_file,int in_width,int in_he
 	avformat_free_context(formatContext);
 
 	free(aux_path);
-	LOGE("END \r\n");
+	write_log("END \r\n");
 
 	return 0;
 }
@@ -658,8 +727,14 @@ double audio_time, video_time;
 
 pthread_t encode_thread;
 
-volatile int exit;
+volatile int exit_thread;
 volatile int record;
+
+volatile int finish_encode_frame;
+
+volatile int thread_finished;
+
+uint8_t *bytes;
 
 void ini(int aux_x, int aux_y,int aux_width,int aux_height,char* aux_path,int aux_bit_rate){
 	x= aux_x;
@@ -673,10 +748,24 @@ void ini(int aux_x, int aux_y,int aux_width,int aux_height,char* aux_path,int au
 
 	iniAvCodec();
 
-	exit = 0;
+	exit_thread = 0;
 	record = 0;
-
+	thread_finished = 0;
+	finish_encode_frame = 1;
+	ini_thread();
 }
+
+GLuint resultFBO;// FBO
+GLuint rboId;  //render buffer id
+
+volatile EGLContext eglContext1;
+volatile EGLSurface eglSurface1;
+volatile EGLDisplay eglDisplay;
+
+EGLContext context;
+EGLContext eglMainContext;
+
+EGLConfig eglConfig;
 
 int iniAvCodec(){
 	AVCodec *audio_codec, *video_codec;
@@ -686,7 +775,7 @@ int iniAvCodec(){
 	//AVFormatContext *formatContext;
 	avformat_alloc_output_context2(&formatContext, NULL, NULL, path);
 	if (!formatContext) {
-		LOGE("Could not deduce output format from file extension: using MPEG.\n");
+		write_log("Could not deduce output format from file extension: using MPEG.\n");
 		avformat_alloc_output_context2(&formatContext, NULL, "mpeg", path);
 	}
 	if (!formatContext)
@@ -724,15 +813,16 @@ int iniAvCodec(){
 	if (!(format->flags & AVFMT_NOFILE)) {
 		ret = avio_open(&formatContext->pb, path, AVIO_FLAG_WRITE);
 		if (ret < 0) {
-			LOGE("Could not open '%s': %s\n", path,
-			av_err2str(ret));
+			write_log("Could not open '%s': %s\n", path,av_err2str(ret));
+			//write_log("Could not open");
 			return 1;
 		}
 	}
 
 	ret = avformat_write_header(formatContext, NULL);
 	if (ret < 0) {
-		LOGE("Error occurred when opening output file: %s\n",av_err2str(ret));
+		write_log("Error occurred when opening output file: %s\n",av_err2str(ret));
+		//write_log("Error occurred when opening output file");
 		return 1;
 	}
 	//out_width=video_st->codec->width;
@@ -742,43 +832,541 @@ int iniAvCodec(){
 	int i = 0;*/
 
 	//sws_context = sws_getContext(width, height, AV_PIX_FMT_BGR24, width, height,video_st->codec->pix_fmt, SWS_BICUBIC, NULL, NULL, NULL);
-	sws_context = sws_getContext(width, height, INPUT_PIX_FMT, width, height,video_st->codec->pix_fmt, SWS_BICUBIC, NULL, NULL, NULL);
+	sws_context = sws_getContext(width-x, height-y, INPUT_PIX_FMT, width, height,video_st->codec->pix_fmt, SWS_BICUBIC, NULL, NULL, NULL);
+
+
+
+	/*glGenRenderbuffers(1, &rboId);
+	glBindRenderbuffer(GL_RENDERBUFFER, rboId);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_RGB565, width, height);
+	glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+	glGenFramebuffers(1, &resultFBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, resultFBO);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,GL_RENDERBUFFER, rboId);
+
+	GLenum errorGL = glGetError();
+
+	if(errorGL == GL_INVALID_ENUM){
+		LOGE("Error FrameBuffer GL_INVALID_ENUM %i",errorGL);
+	}
+
+	if(errorGL == GL_INVALID_OPERATION){
+		LOGE("Error FrameBuffer GL_INVALID_OPERATION %i",errorGL);
+	}
+
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
+	GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+	if (status == GL_FRAMEBUFFER_COMPLETE) {
+		LOGE("Single FBO setup successfully.");
+	} else {
+		LOGE("Problem in setup FBO texture: %d .", status);
+	}
+	errorGL = glGetError();
+
+	if(errorGL != 0){
+		LOGE("Error INI %i",errorGL);
+	}
+*/
+	write_log("Calculate size ");
+	int size = BITS_PER_PIXEL*(width-x)*(height-y);
+	write_log("Ini bytes data ");
+	bytes = (uint8_t*)malloc(size*sizeof(uint8_t));
+	write_log("Finished ini bytes data ");
+
+
+
+
+
+	if(!eglBindAPI(EGL_OPENGL_ES_API)){
+		write_log("ERROR ini API");
+	}
+
+	/*EGLContext eglContext = eglGetCurrentContext();
+	write_EGL_error("eglMakeCurrent");*/
+
+
+
+	eglDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+	write_EGL_error("eglGetDisplay");
+
+	EGLContext eglMainContext = eglGetCurrentContext();
+	write_EGL_error("eglGetCurrentContext");
+
+	/*EGLint contextAttributes[] = {
+		EGL_CONTEXT_CLIENT_VERSION, 2, // I'm using OpenGL ES 2
+		EGL_CONFORMANT,  EGL_OPENGL_BIT ,
+		EGL_RED_SIZE,5,
+		EGL_GREEN_SIZE, 6,
+		EGL_BLUE_SIZE,5,
+		EGL_SURFACE_TYPE,EGL_PBUFFER_BIT,
+		EGL_NONE
+	};*/
+	EGLint contextAttributes[] = {
+		EGL_CONTEXT_CLIENT_VERSION, 2, // I'm using OpenGL ES 2
+		EGL_CONFORMANT,EGL_OPENGL_ES2_BIT ,
+		EGL_NONE
+	};
+	GLint num_config;
+	if(!eglChooseConfig(eglDisplay,contextAttributes,&eglConfig,5,&num_config)){
+		write_EGL_error("eglChooseConfig");
+	}
+
+	//eglSurface1 = eglCreatePbufferSurface(eglDisplay,eglConfig, NULL); // pbuffer surface is enough, we're not going to useit anyway
+
+	eglContext1 = eglCreateContext(eglDisplay,eglConfig,eglMainContext, contextAttributes);
+	write_EGL_error("eglCreateContext");
+
+	//eglSurface1 = eglCreatePbufferSurface(eglDisplay,eglConfig, contextAttributes); // pbuffer surface is enough, we're not going to useit anyway
+	//eglSurface1 = eglGetCurrentSurface(EGL_DRAW);
+	//NativePixmapType pixmap = eglpix;
+
+
+	eglSurface1 = eglCreatePixmapSurface(eglDisplay,eglConfig,bytes,contextAttributes);
+	write_EGL_error("eglCreatePixmapSurface");
+
+	if(eglMainContext == eglContext1){
+		write_log("SHIT FUCKING SAME");
+	}
+
+	if(!eglMakeCurrent(eglDisplay, EGL_NO_SURFACE, eglSurface1, eglContext1)){
+		write_log("ERROR");
+	}
+
+	/*if(!eglMakeCurrent(eglDisplay, NULL, NULL, eglContext1)){
+		write_log("ERROR");
+	}*/
+
+	eglMainContext = eglGetCurrentContext();
+	if(eglMainContext == eglContext1){
+		write_log("YEAH FUCKING SAME");
+	}
+	//EGLContext context2 = eglGetCurrentContext();
+
+	/*if(context == context2){
+		write_log("The same");
+	}*/
+
 
 	return 0;
 }
 
+
+
 void record_video(){
+	if(finish_encode_frame == 0){
+		return;
+	}
+	write_log("RECORD");
+	EGLContext eglContext = eglGetCurrentContext();
+	/*EGLDisplay eglDisplay2 = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+
+	GLuint err=eglGetError();
+	if(err=EGL_NO_DISPLAY){
+		write_log("no display");
+	}*/
+	eglDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+	//eglDisplay = eglGetCurrentDisplay();
+	if(!eglMakeCurrent(eglDisplay, EGL_NO_SURFACE, eglSurface1, eglContext1)){
+		write_log("ERROR");
+		write_EGL_error("eglMakeCurrent");
+	}
+	//eglDisplay = eglGetCurrentDisplay();
+	/*if(!eglMakeCurrent(NULL, NULL, NULL, NULL)){
+		write_log("ERROR");
+	}*/
+
+
+	//eglDisplay = eglGetCurrentDisplay();
+	if(eglContext == eglContext1){
+		write_log("FUCKING SAME");
+	}
+	glReadPixels(x,y,width,height,GL_RGB,GL_UNSIGNED_BYTE,bytes);
+	//ini_thread();
+	//EGLContext eglContext = eglGetCurrentContext();
+
+	/*if(eglContext == eglContext1){
+		write_log("FUCKING SAME");
+	}*/
+
+	/*EGLDisplay eglDisplay2 = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+
+	EGLConfig eglConfig2;*/
+
+	//EGLContext eglMainContext = eglGetCurrentContext();
+
+	/*EGLint contextAttributes[] = {
+		EGL_CONTEXT_CLIENT_VERSION, 2, // I'm using OpenGL ES 2
+		EGL_NONE
+	};*/
+
+	/*EGLint contextAttributes[] = {
+		EGL_CONTEXT_CLIENT_VERSION, 2, // I'm using OpenGL ES 2
+		EGL_NONE
+	};*/
+
+	//eglChooseConfig(eglDisplay,&contextAttributes,&eglConfig,num,&num1);
+
+	//eglSurface1 = eglCreatePbufferSurface(eglDisplay,eglConfig, NULL); // pbuffer surface is enough, we're not going to useit anyway
+
+	/*EGLContext eglContext2 = eglCreateContext(eglDisplay2,eglConfig2,eglMainContext, contextAttributes);
+
+	EGLContext eglSurface2 = eglCreatePbufferSurface(eglDisplay2,eglConfig2, contextAttributes); // pbuffer surface is enough, we're not going to useit anyway
+
+
+
+	if(!eglMakeCurrent(eglDisplay2, EGL_NO_SURFACE, eglSurface1, eglContext2)){
+		write_log("ERROR");
+		EGLint error = eglGetError();
+
+		if(error == EGL_NO_SURFACE){
+			write_log("EGL_NO_SURFACE");
+		}
+		else if(error == EGL_BAD_DISPLAY){
+			write_log("EGL_BAD_DISPLAY");
+		}
+		else if(error == EGL_NOT_INITIALIZED){
+			write_log("EGL_NOT_INITIALIZED");
+		}
+		else if(error == EGL_BAD_CONFIG){
+			write_log("EGL_BAD_CONFIG");
+		}
+		else if(error == EGL_BAD_ATTRIBUTE){
+			write_log("EGL_BAD_ATTRIBUTE");
+		}
+		else if(error == EGL_BAD_ALLOC){
+			write_log("EGL_BAD_ALLOC");
+		}
+		else if(error == EGL_BAD_MATCH){
+			write_log("EGL_BAD_MATCH");
+		}
+	}
+
+	if(eglMainContext == eglContext2){
+		write_log("FUCKING SAME3");
+	}
+
+	glReadPixels(x,y,width,height,GL_RGB,GL_UNSIGNED_BYTE,bytes);*/
+
+	//glReadPixels(x,y,width,height,GL_RGB,GL_UNSIGNED_BYTE,bytes);
+	write_log("END RECORD");
+
+	//OnScreenSize();
+
+	/*if(finish_encode_frame == 0){
+		return;
+	}*/
+
+	/*write_log("Take pixels");
+	//glReadPixels(x,y,width,height,GL_RGB,GL_UNSIGNED_BYTE,bytes);
+	//glReadPixels(100,100,400,500,GL_RGB,GL_UNSIGNED_BYTE,bytes);
+
+	write_log("Finished take pixels");*/
+
+	//glBindBuffer(GL_ARRAY_BUFFER, m_pbos[vram2sys]);
+
+	//context = eglGetCurrentContext();
+
+
+	/*glBindBuffer(GL_FRAMEBUFFER,  1);
+
+	errorGL = glGetError();
+
+	if(errorGL != 0){
+		LOGE("Error %i",errorGL);
+	}*/
+	/*glBindRenderbuffer(GL_RENDERBUFFER, rboId);
+	GLenum errorGL = glGetError();
+
+	if(errorGL != 0){
+		LOGE("Error render %i",errorGL);
+	}*/
+
+	/*glBindFramebuffer(GL_FRAMEBUFFER,  resultFBO);
+	GLenum errorGL = glGetError();
+
+	if(errorGL == GL_INVALID_ENUM){
+		LOGE("Error frame %i",errorGL);
+	}
+
+
+	glReadPixels(x,y,width,height,GL_RGB,GL_UNSIGNED_BYTE,bytes);
+	errorGL = glGetError();
+
+	if(errorGL != 0){
+		LOGE("Error read %i",errorGL);
+	}
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);*/
+
+	/*int vram2sys;
+	int gpu2vram;
+	unsigned char* membuffer;
+	unsigned int memsize;
+
+	// readback current frame into PBO
+	glBindBuffer(GL_ARRAY_BUFFER, bytes);
+	glReadPixels(x,y,width, height, GL_RGB, GL_UNSIGNED_BYTE, 0);
+
+	// copy previous frame from PBO to sysmem
+	glBindBuffer(GL_ARRAY_BUFFER,bytes);
+	//void* data = glMapBuffer(GL_ARRAY_BUFFER, GL_rea);
+	//if (data != NULL)
+	//{
+	//	memcpy(membuffer, data, memsize);
+		// Do something with image in membuffer..
+	//}
+	//glUnmapBuffer(GL_ARRAY_BUFFER);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	int size = 3*width*height;
+	// shift names
+	GLuint temp = bytes[0];
+
+	int i;
+	for (i=1; i<size; i++)
+		bytes[i-1] = bytes[i];
+	bytes[NUMR_PBO - 1] = temp;*/
+
+
+	//eglContext1 =  eglGetCurrentContext();
+
+	/*EGLint contextAttributes[] = {
+		EGL_CONTEXT_CLIENT_VERSION, 2, // I'm using OpenGL ES 2
+		EGL_NONE
+	};
+
+	//EGLSurface eglSurface = eglCreatePbufferSurface(eglDisplay,eglConfig, NULL); // pbuffer surface is enough, we're not going to useit anyway
+
+	EGLDisplay eglDisplay2 = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+
+	EGLContext eglContext = eglCreateContext(eglDisplay2,eglConfig,eglContext1, NULL);*/
+
+
+
+
+	//EGLSurface eglSurface  = eglCreatePbufferSurface(eglDisplay,eglConfig, NULL); // pbuffer surface is enough, we're not going to useit anyway
+
+
+
+
+	/*if(!eglMakeCurrent(eglDisplay2, EGL_NO_SURFACE, eglSurface1, eglContext)){
+		write_log("ERROR");
+	}*/
+
+	/*if(eglContext == eglContext1){
+		write_log("THE FUCKING SAME");
+	}*/
+
+	/*write_log("Take pixels");
+	glReadPixels(x,y,width,height,GL_RGB,GL_UNSIGNED_BYTE,bytes);*/
+
+	//eglContext1 = eglGetCurrentContext();
 	record = 1;
 }
 
 void* encode_image(){
+	EGLContext eglContext = eglGetCurrentContext();
+	finish_encode_frame = 1;
 
-	int size = 3*width*height;
-	uint8_t *bytes = (uint8_t*)malloc(size*sizeof(uint8_t));
-
-	//glViewport(x,y,width,height);
-
-	glReadPixels(x,y,width,height,GL_RGB,GL_UNSIGNED_BYTE,bytes);
-
-	int  errorGL = glGetError();
-
-	if(errorGL != 0){
-		LOGE("Error %i",errorGL);
+	if(eglContext == eglContext1){
+		write_log("SAME IN OTHER THREAD");
 	}
+	//glReadPixels(x,y,width,height,GL_RGB,GL_UNSIGNED_BYTE,bytes);
+	//write_video_frame(bytes,video_st,formatContext,width-x,height-y,width,height,sws_context);
+	//finish_encode_frame = 1;
+	/*EGLint contextAttributes[] = {
+		EGL_CONTEXT_CLIENT_VERSION, 2, // I'm using OpenGL ES 2
+		EGL_NONE
+	};
+
+	EGLConfig eglConfig2;
+	//EGLSurface eglSurface = eglCreatePbufferSurface(eglDisplay,eglConfig, NULL); // pbuffer surface is enough, we're not going to useit anyway
+
+	EGLDisplay eglDisplay2 = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+	//EGLDisplay eglDisplay2 = eglGetCurrentDisplay();
+
+	EGLContext eglContext = eglCreateContext(eglDisplay2,eglConfig2,eglContext1, NULL);
+
+	EGLSurface eglSurface = eglCreatePbufferSurface(eglDisplay,eglConfig2, NULL);*/
+
+	//EGLContext context = eglGetCurrentContext();
+	//EGLDisplay display = eglGetCurrentDisplay();
+	//eglGetCurrentSurface()
+
+	while(exit_thread == 0){
+		//glViewport(x,y,width,height);
+		//LOGE("Loop");
+		if(record == 1){
+
+			finish_encode_frame = 0;
+
+			/*EGLDisplay eglDisplay2 = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+
+			EGLConfig eglConfig2;
+
+			//EGLContext eglMainContext = eglGetCurrentContext();
 
 
-	//write_video_frame(bytes,video_st,formatContext,width,height,width,height,sws_context);
 
-	free(bytes);
+			EGLint contextAttributes[] = {
+				EGL_CONTEXT_CLIENT_VERSION, 2, // I'm using OpenGL ES 2
+				EGL_NONE
+			};
+
+			//eglChooseConfig(eglDisplay,&contextAttributes,&eglConfig,num,&num1);
+
+			//eglSurface1 = eglCreatePbufferSurface(eglDisplay,eglConfig, NULL); // pbuffer surface is enough, we're not going to useit anyway
+
+			EGLContext eglContext2 = eglCreateContext(eglDisplay2,eglConfig2,EGL_NO_CONTEXT, contextAttributes);
+
+			EGLContext eglSurface2 = eglCreatePbufferSurface(eglDisplay2,eglConfig2, contextAttributes); // pbuffer surface is enough, we're not going to useit anyway
+
+
+
+			if(!eglMakeCurrent(eglDisplay2, eglSurface2, eglSurface2, eglContext2)){
+				write_log("ERROR");
+				EGLint error = eglGetError();
+
+				if(error == EGL_NO_SURFACE){
+					write_log("EGL_NO_SURFACE");
+				}
+				else if(error == EGL_BAD_DISPLAY){
+					write_log("EGL_BAD_DISPLAY");
+				}
+				else if(error == EGL_NOT_INITIALIZED){
+					write_log("EGL_NOT_INITIALIZED");
+				}
+				else if(error == EGL_BAD_CONFIG){
+					write_log("EGL_BAD_CONFIG");
+				}
+				else if(error == EGL_BAD_ATTRIBUTE){
+					write_log("EGL_BAD_ATTRIBUTE");
+				}
+				else if(error == EGL_BAD_ALLOC){
+					write_log("EGL_BAD_ALLOC");
+				}
+				else if(error == EGL_BAD_MATCH){
+					write_log("EGL_BAD_MATCH");
+				}
+			}
+
+			if(eglContext == eglContext2){
+				write_log("FUCKING SAME2");
+			}
+			//if(!eglMakeCurrent(eglDisplay, EGL_NO_SURFACE, eglSurface1, eglContext1)){
+			//	write_log("ERROR");
+			//}
+			//glReadPixels(x,y,width,height,GL_RGB,GL_UNSIGNED_BYTE,bytes);*/
+
+			write_log("Take pixels");
+			/*if(!eglMakeCurrent(eglDisplay, eglSurface1, eglSurface1, eglContext1)){
+				write_log("ERROR");
+				EGLint error = eglGetError();
+
+				if(error == EGL_NO_SURFACE){
+					write_log("EGL_NO_SURFACE");
+				}
+				else if(error == EGL_BAD_DISPLAY){
+					write_log("EGL_BAD_DISPLAY");
+				}
+				else if(error == EGL_NOT_INITIALIZED){
+					write_log("EGL_NOT_INITIALIZED");
+				}
+				else if(error == EGL_BAD_CONFIG){
+					write_log("EGL_BAD_CONFIG");
+				}
+				else if(error == EGL_BAD_ATTRIBUTE){
+					write_log("EGL_BAD_ATTRIBUTE");
+				}
+				else if(error == EGL_BAD_ALLOC){
+					write_log("EGL_BAD_ALLOC");
+				}
+				else if(error == EGL_BAD_MATCH){
+					write_log("EGL_BAD_MATCH");
+				}
+			}*/
+
+			EGLContext eglContext = eglGetCurrentContext();
+
+			if(eglContext == eglContext1){
+				write_log("FUCKING SAME");
+			}
+			//glReadPixels(x,y,width,height,GL_RGB,GL_UNSIGNED_BYTE,bytes);
+			//glReadPixels(x,y,width,height,GL_RGB,GL_UNSIGNED_BYTE,bytes);
+			//glReadPixels(100,100,400,500,GL_RGB,GL_UNSIGNED_BYTE,bytes);
+
+			write_log("Finished take pixels");
+
+			/*eglContext = eglGetCurrentContext();
+
+			if(eglContext == eglContext1){
+				write_log("FUCKING SAME NOT WORK");
+			}
+
+			if(!eglMakeCurrent(eglDisplay, NULL, NULL, eglContext1)){
+				write_log("ERROR");
+				EGLint error = eglGetError();
+
+				if(error == EGL_NO_SURFACE){
+					write_log("EGL_NO_SURFACE");
+				}
+				else if(error == EGL_BAD_DISPLAY){
+					write_log("EGL_BAD_DISPLAY");
+				}
+				else if(error == EGL_NOT_INITIALIZED){
+					write_log("EGL_NOT_INITIALIZED");
+				}
+				else if(error == EGL_BAD_CONFIG){
+					write_log("EGL_BAD_CONFIG");
+				}
+				else if(error == EGL_BAD_ATTRIBUTE){
+					write_log("EGL_BAD_ATTRIBUTE");
+				}
+				else if(error == EGL_BAD_ALLOC){
+					write_log("EGL_BAD_ALLOC");
+				}
+				else if(error == EGL_BAD_MATCH){
+					write_log("EGL_BAD_MATCH");
+				}
+			}
+
+			glReadPixels(x,y,width,height,GL_RGB,GL_UNSIGNED_BYTE,bytes);*/
+			//eglMakeCurrent(NULL,NULL,NULL,NULL);
+
+			//LOGE("RECORD");
+			write_video_frame(bytes,video_st,formatContext,width-x,height-y,width,height,sws_context);
+
+			finish_encode_frame = 1;
+
+			record = 0;
+
+			//eglContext = eglGetCurrentContext();
+		}
+
+	}
+	//free(bytes);
+
+	thread_finished = 1;
 }
 
-void ini_threaD(){
+void ini_thread(){
 	pthread_create(&encode_thread,NULL,encode_image,NULL);
 }
 
 
 
 void freeMemory(){
+
+	exit_thread = 1;
+	record = 0;
+
+	while(thread_finished == 0){
+		sleep(1);
+	}
+
 	sws_freeContext(sws_context);
 	//closedir(pDirs);
 	 av_write_trailer(formatContext);
@@ -801,7 +1389,6 @@ void freeMemory(){
 
 	free(path);
 
-	exit = 1;
-	record = 0;
+	free(bytes);
 }
 
