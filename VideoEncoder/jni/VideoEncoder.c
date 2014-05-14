@@ -21,20 +21,35 @@
 #include "libavutil/opt.h"
 //#include "libavutil/channel_layout.h"
 
-/*#include <GLES2/gl2.h>
-#include <GLES2/gl2ext.h>*/
+#define GLES3 1
 
-#include <GLES/gl.h>
+#if GLES3
+
+#include <GLES3/gl3.h>
+#include <GLES3/gl3ext.h>
+#include <GLES3/gl3platform.h>
+
+#else
+#include <GLES2/gl2.h>
+#include <GLES2/gl2ext.h>
+#include <GLES2/gl2platform.h>
+
+#endif
+
+
+/*#include <GLES/gl.h>
 #include <GLES/glext.h>
+#include <GLES/glplatform.h>*/
 
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 #include <EGL/eglplatform.h>
 
+#include <time.h>
+
 #include <wchar.h>
 
 #include <jni.h>
-
 #include <android/log.h>
 
 #include <pthread.h>
@@ -88,6 +103,7 @@ void write_log(char *text,...){
 }
 
 void write_EGL_error(char* id){
+
 	EGLint error = eglGetError();
 	if(error != EGL_SUCCESS){
 		write_log(id);
@@ -115,6 +131,9 @@ void write_EGL_error(char* id){
 		}
 		else if(error == EGL_BAD_MATCH){
 			write_log("EGL_BAD_MATCH");
+		}
+		else if(error == EGL_BAD_SURFACE){
+			write_log("EGL_BAD_SURFACE");
 		}
 		else if(error ==  EGL_CONTEXT_LOST ){
 			write_log(" EGL_CONTEXT_LOST ");
@@ -215,6 +234,7 @@ AVStream* add_stream(AVFormatContext *formatContext, AVCodec **codec,enum AVCode
 			/* Resolution must be a multiple of two. */
 			c->width = out_width;
 			c->height = out_height;
+
 			/* timebase: This is the fundamental unit of time (in seconds) in terms
 			* of which frame timestamps are represented. For fixed-fps content,
 			* timebase should be 1/framerate and timestamp increments should be
@@ -734,7 +754,8 @@ volatile int finish_encode_frame;
 
 volatile int thread_finished;
 
-uint8_t *bytes;
+//uint8_t *bytes;
+int size;
 
 void ini(int aux_x, int aux_y,int aux_width,int aux_height,char* aux_path,int aux_bit_rate){
 	x= aux_x;
@@ -752,8 +773,14 @@ void ini(int aux_x, int aux_y,int aux_width,int aux_height,char* aux_path,int au
 	record = 0;
 	thread_finished = 0;
 	finish_encode_frame = 1;
-	ini_thread();
+	//ini_thread();
 }
+
+GLuint pbo_id;
+
+#define NUMR_PBO 4
+GLuint m_pbos[NUMR_PBO];
+int gpu2vram;
 
 GLuint resultFBO;// FBO
 GLuint rboId;  //render buffer id
@@ -836,524 +863,163 @@ int iniAvCodec(){
 
 
 
-	/*glGenRenderbuffers(1, &rboId);
-	glBindRenderbuffer(GL_RENDERBUFFER, rboId);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_RGB565, width, height);
-	glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
-	glGenFramebuffers(1, &resultFBO);
-	glBindFramebuffer(GL_FRAMEBUFFER, resultFBO);
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,GL_RENDERBUFFER, rboId);
+	size = BITS_PER_PIXEL*(width-x)*(height-y);
 
-	GLenum errorGL = glGetError();
 
-	if(errorGL == GL_INVALID_ENUM){
-		LOGE("Error FrameBuffer GL_INVALID_ENUM %i",errorGL);
+	memset(m_pbos, 0, sizeof(m_pbos));
+
+	if (m_pbos[0] == 0){
+		glGenBuffers(NUMR_PBO, m_pbos);
+	}
+	// create empty PBO buffers
+	int i;
+	for (i=0; i<NUMR_PBO; i++)
+	{
+		glBindBuffer(GL_PIXEL_PACK_BUFFER, m_pbos[i]);
+		glBufferData(GL_PIXEL_PACK_BUFFER, size, NULL, GL_STATIC_READ);
 	}
 
-	if(errorGL == GL_INVALID_OPERATION){
-		LOGE("Error FrameBuffer GL_INVALID_OPERATION %i",errorGL);
-	}
+	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 
+	// backbuffer to vram pbo index
+	gpu2vram = NUMR_PBO-1;
 
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	/*glGenBuffers(1, &pbo_id);
+	glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_id);
+	glBufferData(GL_PIXEL_PACK_BUFFER, size, 0, GL_DYNAMIC_READ);
+	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);*/
 
+	return 0;
+}
 
-	GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-	if (status == GL_FRAMEBUFFER_COMPLETE) {
-		LOGE("Single FBO setup successfully.");
-	} else {
-		LOGE("Problem in setup FBO texture: %d .", status);
-	}
-	errorGL = glGetError();
-
-	if(errorGL != 0){
-		LOGE("Error INI %i",errorGL);
-	}
-*/
-	write_log("Calculate size ");
-	int size = BITS_PER_PIXEL*(width-x)*(height-y);
-	write_log("Ini bytes data ");
-	bytes = (uint8_t*)malloc(size*sizeof(uint8_t));
-	write_log("Finished ini bytes data ");
-
-
-
-
-
-	if(!eglBindAPI(EGL_OPENGL_ES_API)){
-		write_log("ERROR ini API");
-	}
-
-	/*EGLContext eglContext = eglGetCurrentContext();
-	write_EGL_error("eglMakeCurrent");*/
-
-
-
+void createContext(){
 	eglDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
 	write_EGL_error("eglGetDisplay");
+
+
+	GLuint major;
+	GLuint minor;
+	if(!eglInitialize(eglDisplay,&major,&minor)){
+		write_EGL_error("eglGetCurrentContext");
+	}
+
 
 	EGLContext eglMainContext = eglGetCurrentContext();
 	write_EGL_error("eglGetCurrentContext");
 
-	/*EGLint contextAttributes[] = {
-		EGL_CONTEXT_CLIENT_VERSION, 2, // I'm using OpenGL ES 2
-		EGL_CONFORMANT,  EGL_OPENGL_BIT ,
-		EGL_RED_SIZE,5,
-		EGL_GREEN_SIZE, 6,
-		EGL_BLUE_SIZE,5,
-		EGL_SURFACE_TYPE,EGL_PBUFFER_BIT,
-		EGL_NONE
-	};*/
 	EGLint contextAttributes[] = {
-		EGL_CONTEXT_CLIENT_VERSION, 2, // I'm using OpenGL ES 2
-		EGL_CONFORMANT,EGL_OPENGL_ES2_BIT ,
+		EGL_SURFACE_TYPE, EGL_PBUFFER_BIT,
+		EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
+		EGL_RED_SIZE, 5,
+		EGL_GREEN_SIZE, 6,
+		EGL_BLUE_SIZE, 5,
+		EGL_DEPTH_SIZE, 1,
 		EGL_NONE
 	};
-	GLint num_config;
-	if(!eglChooseConfig(eglDisplay,contextAttributes,&eglConfig,5,&num_config)){
+	const EGLint maxConfigs = 10;
+	EGLConfig configs[maxConfigs]; // We'll only accept 10 configs
+	EGLint num_config;
+	if(!eglChooseConfig(eglDisplay,contextAttributes,configs,maxConfigs,&num_config)){
 		write_EGL_error("eglChooseConfig");
 	}
 
-	//eglSurface1 = eglCreatePbufferSurface(eglDisplay,eglConfig, NULL); // pbuffer surface is enough, we're not going to useit anyway
+	EGLint attribList[] = {
+		EGL_WIDTH, width,
+		EGL_HEIGHT, height,
+		EGL_LARGEST_PBUFFER, EGL_TRUE,
+		EGL_NONE
+	};
+	eglSurface1 = eglCreatePbufferSurface(eglDisplay, configs[0], attribList);
+	if(eglSurface1 == EGL_NO_SURFACE){
+		write_EGL_error("eglCreatePixmapSurface");
+	}
 
-	eglContext1 = eglCreateContext(eglDisplay,eglConfig,eglMainContext, contextAttributes);
+	EGLint attribLista[] = {
+		EGL_CONTEXT_CLIENT_VERSION, 2,
+		EGL_NONE
+	};
+
+	EGLContext context = eglGetCurrentContext();
+	eglContext1 = eglCreateContext(eglDisplay, configs[0], context, attribLista);
 	write_EGL_error("eglCreateContext");
 
-	//eglSurface1 = eglCreatePbufferSurface(eglDisplay,eglConfig, contextAttributes); // pbuffer surface is enough, we're not going to useit anyway
-	//eglSurface1 = eglGetCurrentSurface(EGL_DRAW);
-	//NativePixmapType pixmap = eglpix;
 
-
-	eglSurface1 = eglCreatePixmapSurface(eglDisplay,eglConfig,bytes,contextAttributes);
-	write_EGL_error("eglCreatePixmapSurface");
-
-	if(eglMainContext == eglContext1){
-		write_log("SHIT FUCKING SAME");
+	if(!eglMakeCurrent(eglDisplay, eglSurface1, eglSurface1, eglContext1)){
+		write_EGL_error("eglMakeCurrent");
 	}
-
-	if(!eglMakeCurrent(eglDisplay, EGL_NO_SURFACE, eglSurface1, eglContext1)){
-		write_log("ERROR");
-	}
-
-	/*if(!eglMakeCurrent(eglDisplay, NULL, NULL, eglContext1)){
-		write_log("ERROR");
-	}*/
 
 	eglMainContext = eglGetCurrentContext();
 	if(eglMainContext == eglContext1){
 		write_log("YEAH FUCKING SAME");
 	}
-	//EGLContext context2 = eglGetCurrentContext();
-
-	/*if(context == context2){
-		write_log("The same");
-	}*/
-
-
-	return 0;
 }
+void* encode_image(void* bytes){
+
+	finish_encode_frame = 1;
 
 
+	finish_encode_frame = 0;
+
+	write_log("Write frame");
+	write_video_frame(bytes,video_st,formatContext,width-x,height-y,width,height,sws_context);
+	write_log("End write frame");
+	free(bytes);
+
+	finish_encode_frame = 1;
+
+	record = 0;
+
+
+
+	thread_finished = 1;
+}
 
 void record_video(){
 	if(finish_encode_frame == 0){
 		return;
 	}
-	write_log("RECORD");
-	EGLContext eglContext = eglGetCurrentContext();
-	/*EGLDisplay eglDisplay2 = eglGetDisplay(EGL_DEFAULT_DISPLAY);
 
-	GLuint err=eglGetError();
-	if(err=EGL_NO_DISPLAY){
-		write_log("no display");
+	/*while(finish_encode_frame != 1){
+		//Sleep();
 	}*/
-	eglDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-	//eglDisplay = eglGetCurrentDisplay();
-	if(!eglMakeCurrent(eglDisplay, EGL_NO_SURFACE, eglSurface1, eglContext1)){
-		write_log("ERROR");
-		write_EGL_error("eglMakeCurrent");
-	}
-	//eglDisplay = eglGetCurrentDisplay();
-	/*if(!eglMakeCurrent(NULL, NULL, NULL, NULL)){
-		write_log("ERROR");
-	}*/
+	//glReadBuffer(GL_COLOR_ATTACHMENT0);
+	write_log("BEGIN");
+	glBindBuffer(GL_PIXEL_PACK_BUFFER, m_pbos[gpu2vram]);
+	write_log("glBindBuffer");
 
+	glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, 0);
+	write_log("glReadPixels");
+	GLubyte *ptr = glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, size, GL_MAP_READ_BIT);
+	write_log("glMapBufferRange");
 
-	//eglDisplay = eglGetCurrentDisplay();
-	if(eglContext == eglContext1){
-		write_log("FUCKING SAME");
-	}
-	glReadPixels(x,y,width,height,GL_RGB,GL_UNSIGNED_BYTE,bytes);
+	uint8_t *bytes = (uint8_t*)malloc(size*sizeof(uint8_t));
+	//LOGE("RECORD");
+	memcpy(bytes, ptr, size);
 	//ini_thread();
-	//EGLContext eglContext = eglGetCurrentContext();
+	//record = 1;
+	pthread_create(&encode_thread,NULL,encode_image,(void*)bytes);
 
-	/*if(eglContext == eglContext1){
-		write_log("FUCKING SAME");
-	}*/
+	glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+	write_log("glUnmapBuffer");
+	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+	write_log("glBindBuffer");
 
-	/*EGLDisplay eglDisplay2 = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-
-	EGLConfig eglConfig2;*/
-
-	//EGLContext eglMainContext = eglGetCurrentContext();
-
-	/*EGLint contextAttributes[] = {
-		EGL_CONTEXT_CLIENT_VERSION, 2, // I'm using OpenGL ES 2
-		EGL_NONE
-	};*/
-
-	/*EGLint contextAttributes[] = {
-		EGL_CONTEXT_CLIENT_VERSION, 2, // I'm using OpenGL ES 2
-		EGL_NONE
-	};*/
-
-	//eglChooseConfig(eglDisplay,&contextAttributes,&eglConfig,num,&num1);
-
-	//eglSurface1 = eglCreatePbufferSurface(eglDisplay,eglConfig, NULL); // pbuffer surface is enough, we're not going to useit anyway
-
-	/*EGLContext eglContext2 = eglCreateContext(eglDisplay2,eglConfig2,eglMainContext, contextAttributes);
-
-	EGLContext eglSurface2 = eglCreatePbufferSurface(eglDisplay2,eglConfig2, contextAttributes); // pbuffer surface is enough, we're not going to useit anyway
-
-
-
-	if(!eglMakeCurrent(eglDisplay2, EGL_NO_SURFACE, eglSurface1, eglContext2)){
-		write_log("ERROR");
-		EGLint error = eglGetError();
-
-		if(error == EGL_NO_SURFACE){
-			write_log("EGL_NO_SURFACE");
-		}
-		else if(error == EGL_BAD_DISPLAY){
-			write_log("EGL_BAD_DISPLAY");
-		}
-		else if(error == EGL_NOT_INITIALIZED){
-			write_log("EGL_NOT_INITIALIZED");
-		}
-		else if(error == EGL_BAD_CONFIG){
-			write_log("EGL_BAD_CONFIG");
-		}
-		else if(error == EGL_BAD_ATTRIBUTE){
-			write_log("EGL_BAD_ATTRIBUTE");
-		}
-		else if(error == EGL_BAD_ALLOC){
-			write_log("EGL_BAD_ALLOC");
-		}
-		else if(error == EGL_BAD_MATCH){
-			write_log("EGL_BAD_MATCH");
-		}
-	}
-
-	if(eglMainContext == eglContext2){
-		write_log("FUCKING SAME3");
-	}
-
-	glReadPixels(x,y,width,height,GL_RGB,GL_UNSIGNED_BYTE,bytes);*/
-
-	//glReadPixels(x,y,width,height,GL_RGB,GL_UNSIGNED_BYTE,bytes);
-	write_log("END RECORD");
-
-	//OnScreenSize();
-
-	/*if(finish_encode_frame == 0){
-		return;
-	}*/
-
-	/*write_log("Take pixels");
-	//glReadPixels(x,y,width,height,GL_RGB,GL_UNSIGNED_BYTE,bytes);
-	//glReadPixels(100,100,400,500,GL_RGB,GL_UNSIGNED_BYTE,bytes);
-
-	write_log("Finished take pixels");*/
-
-	//glBindBuffer(GL_ARRAY_BUFFER, m_pbos[vram2sys]);
-
-	//context = eglGetCurrentContext();
-
-
-	/*glBindBuffer(GL_FRAMEBUFFER,  1);
-
-	errorGL = glGetError();
-
-	if(errorGL != 0){
-		LOGE("Error %i",errorGL);
-	}*/
-	/*glBindRenderbuffer(GL_RENDERBUFFER, rboId);
-	GLenum errorGL = glGetError();
-
-	if(errorGL != 0){
-		LOGE("Error render %i",errorGL);
-	}*/
-
-	/*glBindFramebuffer(GL_FRAMEBUFFER,  resultFBO);
-	GLenum errorGL = glGetError();
-
-	if(errorGL == GL_INVALID_ENUM){
-		LOGE("Error frame %i",errorGL);
-	}
-
-
-	glReadPixels(x,y,width,height,GL_RGB,GL_UNSIGNED_BYTE,bytes);
-	errorGL = glGetError();
-
-	if(errorGL != 0){
-		LOGE("Error read %i",errorGL);
-	}
-
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);*/
-
-	/*int vram2sys;
-	int gpu2vram;
-	unsigned char* membuffer;
-	unsigned int memsize;
-
-	// readback current frame into PBO
-	glBindBuffer(GL_ARRAY_BUFFER, bytes);
-	glReadPixels(x,y,width, height, GL_RGB, GL_UNSIGNED_BYTE, 0);
-
-	// copy previous frame from PBO to sysmem
-	glBindBuffer(GL_ARRAY_BUFFER,bytes);
-	//void* data = glMapBuffer(GL_ARRAY_BUFFER, GL_rea);
-	//if (data != NULL)
-	//{
-	//	memcpy(membuffer, data, memsize);
-		// Do something with image in membuffer..
-	//}
-	//glUnmapBuffer(GL_ARRAY_BUFFER);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	int size = 3*width*height;
 	// shift names
-	GLuint temp = bytes[0];
-
+	GLuint temp = m_pbos[0];
 	int i;
-	for (i=1; i<size; i++)
-		bytes[i-1] = bytes[i];
-	bytes[NUMR_PBO - 1] = temp;*/
+	for (i=1; i<NUMR_PBO; i++){
+		m_pbos[i-1] = m_pbos[i];
+	}
+	m_pbos[NUMR_PBO - 1] = temp;
 
-
-	//eglContext1 =  eglGetCurrentContext();
-
-	/*EGLint contextAttributes[] = {
-		EGL_CONTEXT_CLIENT_VERSION, 2, // I'm using OpenGL ES 2
-		EGL_NONE
-	};
-
-	//EGLSurface eglSurface = eglCreatePbufferSurface(eglDisplay,eglConfig, NULL); // pbuffer surface is enough, we're not going to useit anyway
-
-	EGLDisplay eglDisplay2 = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-
-	EGLContext eglContext = eglCreateContext(eglDisplay2,eglConfig,eglContext1, NULL);*/
-
-
-
-
-	//EGLSurface eglSurface  = eglCreatePbufferSurface(eglDisplay,eglConfig, NULL); // pbuffer surface is enough, we're not going to useit anyway
-
-
-
-
-	/*if(!eglMakeCurrent(eglDisplay2, EGL_NO_SURFACE, eglSurface1, eglContext)){
-		write_log("ERROR");
-	}*/
-
-	/*if(eglContext == eglContext1){
-		write_log("THE FUCKING SAME");
-	}*/
-
-	/*write_log("Take pixels");
-	glReadPixels(x,y,width,height,GL_RGB,GL_UNSIGNED_BYTE,bytes);*/
-
-	//eglContext1 = eglGetCurrentContext();
-	record = 1;
+	write_log("RECORD");
 }
 
-void* encode_image(){
-	EGLContext eglContext = eglGetCurrentContext();
-	finish_encode_frame = 1;
 
-	if(eglContext == eglContext1){
-		write_log("SAME IN OTHER THREAD");
-	}
-	//glReadPixels(x,y,width,height,GL_RGB,GL_UNSIGNED_BYTE,bytes);
-	//write_video_frame(bytes,video_st,formatContext,width-x,height-y,width,height,sws_context);
-	//finish_encode_frame = 1;
-	/*EGLint contextAttributes[] = {
-		EGL_CONTEXT_CLIENT_VERSION, 2, // I'm using OpenGL ES 2
-		EGL_NONE
-	};
-
-	EGLConfig eglConfig2;
-	//EGLSurface eglSurface = eglCreatePbufferSurface(eglDisplay,eglConfig, NULL); // pbuffer surface is enough, we're not going to useit anyway
-
-	EGLDisplay eglDisplay2 = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-	//EGLDisplay eglDisplay2 = eglGetCurrentDisplay();
-
-	EGLContext eglContext = eglCreateContext(eglDisplay2,eglConfig2,eglContext1, NULL);
-
-	EGLSurface eglSurface = eglCreatePbufferSurface(eglDisplay,eglConfig2, NULL);*/
-
-	//EGLContext context = eglGetCurrentContext();
-	//EGLDisplay display = eglGetCurrentDisplay();
-	//eglGetCurrentSurface()
-
-	while(exit_thread == 0){
-		//glViewport(x,y,width,height);
-		//LOGE("Loop");
-		if(record == 1){
-
-			finish_encode_frame = 0;
-
-			/*EGLDisplay eglDisplay2 = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-
-			EGLConfig eglConfig2;
-
-			//EGLContext eglMainContext = eglGetCurrentContext();
-
-
-
-			EGLint contextAttributes[] = {
-				EGL_CONTEXT_CLIENT_VERSION, 2, // I'm using OpenGL ES 2
-				EGL_NONE
-			};
-
-			//eglChooseConfig(eglDisplay,&contextAttributes,&eglConfig,num,&num1);
-
-			//eglSurface1 = eglCreatePbufferSurface(eglDisplay,eglConfig, NULL); // pbuffer surface is enough, we're not going to useit anyway
-
-			EGLContext eglContext2 = eglCreateContext(eglDisplay2,eglConfig2,EGL_NO_CONTEXT, contextAttributes);
-
-			EGLContext eglSurface2 = eglCreatePbufferSurface(eglDisplay2,eglConfig2, contextAttributes); // pbuffer surface is enough, we're not going to useit anyway
-
-
-
-			if(!eglMakeCurrent(eglDisplay2, eglSurface2, eglSurface2, eglContext2)){
-				write_log("ERROR");
-				EGLint error = eglGetError();
-
-				if(error == EGL_NO_SURFACE){
-					write_log("EGL_NO_SURFACE");
-				}
-				else if(error == EGL_BAD_DISPLAY){
-					write_log("EGL_BAD_DISPLAY");
-				}
-				else if(error == EGL_NOT_INITIALIZED){
-					write_log("EGL_NOT_INITIALIZED");
-				}
-				else if(error == EGL_BAD_CONFIG){
-					write_log("EGL_BAD_CONFIG");
-				}
-				else if(error == EGL_BAD_ATTRIBUTE){
-					write_log("EGL_BAD_ATTRIBUTE");
-				}
-				else if(error == EGL_BAD_ALLOC){
-					write_log("EGL_BAD_ALLOC");
-				}
-				else if(error == EGL_BAD_MATCH){
-					write_log("EGL_BAD_MATCH");
-				}
-			}
-
-			if(eglContext == eglContext2){
-				write_log("FUCKING SAME2");
-			}
-			//if(!eglMakeCurrent(eglDisplay, EGL_NO_SURFACE, eglSurface1, eglContext1)){
-			//	write_log("ERROR");
-			//}
-			//glReadPixels(x,y,width,height,GL_RGB,GL_UNSIGNED_BYTE,bytes);*/
-
-			write_log("Take pixels");
-			/*if(!eglMakeCurrent(eglDisplay, eglSurface1, eglSurface1, eglContext1)){
-				write_log("ERROR");
-				EGLint error = eglGetError();
-
-				if(error == EGL_NO_SURFACE){
-					write_log("EGL_NO_SURFACE");
-				}
-				else if(error == EGL_BAD_DISPLAY){
-					write_log("EGL_BAD_DISPLAY");
-				}
-				else if(error == EGL_NOT_INITIALIZED){
-					write_log("EGL_NOT_INITIALIZED");
-				}
-				else if(error == EGL_BAD_CONFIG){
-					write_log("EGL_BAD_CONFIG");
-				}
-				else if(error == EGL_BAD_ATTRIBUTE){
-					write_log("EGL_BAD_ATTRIBUTE");
-				}
-				else if(error == EGL_BAD_ALLOC){
-					write_log("EGL_BAD_ALLOC");
-				}
-				else if(error == EGL_BAD_MATCH){
-					write_log("EGL_BAD_MATCH");
-				}
-			}*/
-
-			EGLContext eglContext = eglGetCurrentContext();
-
-			if(eglContext == eglContext1){
-				write_log("FUCKING SAME");
-			}
-			//glReadPixels(x,y,width,height,GL_RGB,GL_UNSIGNED_BYTE,bytes);
-			//glReadPixels(x,y,width,height,GL_RGB,GL_UNSIGNED_BYTE,bytes);
-			//glReadPixels(100,100,400,500,GL_RGB,GL_UNSIGNED_BYTE,bytes);
-
-			write_log("Finished take pixels");
-
-			/*eglContext = eglGetCurrentContext();
-
-			if(eglContext == eglContext1){
-				write_log("FUCKING SAME NOT WORK");
-			}
-
-			if(!eglMakeCurrent(eglDisplay, NULL, NULL, eglContext1)){
-				write_log("ERROR");
-				EGLint error = eglGetError();
-
-				if(error == EGL_NO_SURFACE){
-					write_log("EGL_NO_SURFACE");
-				}
-				else if(error == EGL_BAD_DISPLAY){
-					write_log("EGL_BAD_DISPLAY");
-				}
-				else if(error == EGL_NOT_INITIALIZED){
-					write_log("EGL_NOT_INITIALIZED");
-				}
-				else if(error == EGL_BAD_CONFIG){
-					write_log("EGL_BAD_CONFIG");
-				}
-				else if(error == EGL_BAD_ATTRIBUTE){
-					write_log("EGL_BAD_ATTRIBUTE");
-				}
-				else if(error == EGL_BAD_ALLOC){
-					write_log("EGL_BAD_ALLOC");
-				}
-				else if(error == EGL_BAD_MATCH){
-					write_log("EGL_BAD_MATCH");
-				}
-			}
-
-			glReadPixels(x,y,width,height,GL_RGB,GL_UNSIGNED_BYTE,bytes);*/
-			//eglMakeCurrent(NULL,NULL,NULL,NULL);
-
-			//LOGE("RECORD");
-			write_video_frame(bytes,video_st,formatContext,width-x,height-y,width,height,sws_context);
-
-			finish_encode_frame = 1;
-
-			record = 0;
-
-			//eglContext = eglGetCurrentContext();
-		}
-
-	}
-	//free(bytes);
-
-	thread_finished = 1;
-}
 
 void ini_thread(){
-	pthread_create(&encode_thread,NULL,encode_image,NULL);
+
 }
 
 
@@ -1389,6 +1055,6 @@ void freeMemory(){
 
 	free(path);
 
-	free(bytes);
+	//free(bytes);
 }
 
