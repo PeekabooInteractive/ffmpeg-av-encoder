@@ -177,7 +177,7 @@ int dirSelect(const   struct   dirent   *dir){
    }
 }
 
-uint8_t* readBytesFromFile(char* path){
+void readBytesFromFile(uint8_t *inbuffer,char* path){
 	LOGE("ENCODE fopen");
 	pthread_mutex_lock(&io_mutex);
 	FILE *img = fopen(path,"rb");
@@ -190,7 +190,7 @@ uint8_t* readBytesFromFile(char* path){
 
 	// allocate memory to contain the whole file:
 	//uint8_t *inbuffer = (uint8_t*) malloc (sizeof(uint8_t)* lSize);
-	uint8_t *inbuffer = (uint8_t*) av_malloc (sizeof(uint8_t)* lSize);
+
 
 	if (inbuffer == NULL) {
 		fputs ("Memory error",stderr);
@@ -203,13 +203,13 @@ uint8_t* readBytesFromFile(char* path){
 		fputs ("Reading error",stderr);
 		exit (3);
 	}
-	LOGE("ENCODE fclose");
+
 	fclose(img);
-	LOGE("/ENCODE fclose");
+
 	remove(path);
 
 	pthread_mutex_unlock(&io_mutex);
-	return inbuffer;
+	//return inbuffer;
 }
 
 AVStream* addStream(AVFormatContext *formatContext, AVCodec **codec,enum AVCodecID codec_id,int bit_rate,int out_width,int out_height){
@@ -309,7 +309,7 @@ void openVideo(AVFormatContext *oc, AVCodec *codec, AVStream *st){
 	}
 }
 
-AVFrame* converImageToEncode(AVCodecContext* codec,uint8_t* inbuffer,int in_width,int in_height,int out_width,int out_height,struct SwsContext* sws_context){
+void converImageToEncode(AVPicture outpic,AVPicture inpic,AVCodecContext* codec,uint8_t* inbuffer,int in_width,int in_height,int out_width,int out_height,struct SwsContext* sws_context){
 	//int in_width, in_height, out_width, out_height;
 
 	writeLog("Try to convert image");
@@ -318,36 +318,36 @@ AVFrame* converImageToEncode(AVCodecContext* codec,uint8_t* inbuffer,int in_widt
 
 
 	//calculate the bytes needed for the output image
-	int nbytes = avpicture_get_size(codec->pix_fmt, out_width, out_height);
+	//int nbytes = avpicture_get_size(codec->pix_fmt, out_width, out_height);
 
 	//create ffmpeg frame structures.  These do not allocate space for image data,
 	//just the pointers and other information about the image.
-	AVFrame* inpic = av_frame_alloc();
-	AVFrame* outpic = av_frame_alloc();
+	//AVFrame* inpic = av_frame_alloc();
+	//AVFrame* outpic = av_frame_alloc();
 
 	//this will set the pointers in the frame structures to the right points in
 	//the input and output buffers.
 	//avpicture_alloc((AVPicture*)inpic, AV_PIX_FMT_BGR24, in_width, in_height);
 
-	avpicture_alloc((AVPicture*)inpic, INPUT_PIX_FMT, in_width, in_height);
+	//avpicture_alloc((AVPicture*)inpic, INPUT_PIX_FMT, in_width, in_height);
 	writeLog("Up to down initial image");
-	avpicture_fill((AVPicture*)inpic, inbuffer, INPUT_PIX_FMT, in_width, in_height);
+	//avpicture_fill((AVPicture*)inpic, inbuffer, INPUT_PIX_FMT, in_width, in_height);
 
-	/*int i;
+	int i;
 	int j=0;
 	for (i = in_height-1; i >= 0; i--){
-		memcpy(&inpic->data[0][j*in_width * 3],&inbuffer[i*in_width * 3],in_width * 3);
+		memcpy(&inpic.data[0][j*in_width * 3],&inbuffer[i*in_width * 3],in_width * 3);
 		j++;
-	}*/
+	}
 
 	writeLog("av_malloc");
 
 	//create buffer for the output image
-	uint8_t* outbuffer = (uint8_t*)av_malloc(nbytes*sizeof(uint8_t));
+	//uint8_t* outbuffer = (uint8_t*)av_malloc(nbytes*sizeof(uint8_t));
 
 	writeLog("Fill initial image");
 
-	avpicture_fill((AVPicture*)outpic, outbuffer, codec->pix_fmt, out_width, out_height);
+	//avpicture_fill((AVPicture*)outpic, outbuffer, codec->pix_fmt, out_width, out_height);
 
 
 	//return outpic;
@@ -359,7 +359,7 @@ AVFrame* converImageToEncode(AVCodecContext* codec,uint8_t* inbuffer,int in_widt
 
 	//perform the conversion
 	writeLog("Start scale");
-	sws_scale(sws_context, (const uint8_t * const *)inpic->data, inpic->linesize, 0, in_height, outpic->data, outpic->linesize);
+	sws_scale(sws_context, (const uint8_t * const *)inpic.data, inpic.linesize, 0, in_height, outpic.data, outpic.linesize);
 	writeLog("End scale");
 
 	/*av_free(inpic);
@@ -369,11 +369,11 @@ AVFrame* converImageToEncode(AVCodecContext* codec,uint8_t* inbuffer,int in_widt
 	//avpicture_free(inpic);
 	//av_frame_free(&inpic);
 
-	return outpic;
+	//return outpic;
 }
 
 
-void writeVideoFrameFromFile(char* path,AVStream *video_st,AVFormatContext *formatContext,int in_width,int in_height,int out_width,int out_height,struct SwsContext* sws_context){
+void writeVideoFrameFromFile(AVFrame *frame,AVPicture outpic,AVPicture inpic,uint8_t* inbuffer,char* path,AVStream *video_st,AVFormatContext *formatContext,int in_width,int in_height,int out_width,int out_height,struct SwsContext* sws_context){
 	AVPacket pkt;
 
 	av_init_packet(&pkt);
@@ -381,31 +381,29 @@ void writeVideoFrameFromFile(char* path,AVStream *video_st,AVFormatContext *form
 	pkt.data = NULL; // packet data will be allocated by the encoder
 	pkt.size = 0;
 
-	LOGE("readBytesFromFile %s",path);
-	uint8_t* inbuffer = readBytesFromFile(path);
-	LOGE("converImageToEncode");
-	AVFrame* frame = converImageToEncode(video_st->codec,inbuffer,in_width,in_height,out_width,out_height,sws_context);
+
+	readBytesFromFile(inbuffer,path);
+
+	converImageToEncode(outpic,inpic,video_st->codec,inbuffer,in_width,in_height,out_width,out_height,sws_context);
 
 	int got_output;
-	LOGE("avcodec_encode_video2");
+
 	int ret = avcodec_encode_video2(video_st->codec, &pkt, frame, &got_output);
 	if (ret < 0) {
 		writeLog("Error encoding frame\n");
 		exit(1);
 	}
-	LOGE("writeFrame");
+
 	if (got_output) {
-		LOGE("Write frame  (size=%5d)\n", pkt.size);
 		//write_log("Write frame  ");
 		writeFrame(formatContext, &video_st->codec->time_base, video_st, &pkt);
 	}
-	LOGE("av_free");
+	av_free_packet(&pkt);
 	//av_free(inbuffer);
 	//av_frame_free(&frame);
 
 	//av_free_packet(&pkt);
 	//avpicture_free((AVPicture*)frame);
-	LOGE("free(inbuffer)");
 
 	//free(inbuffer);
 }
@@ -444,7 +442,7 @@ void* writeVideoFrame(void* args){
 	pkt.data = NULL; // packet data will be allocated by the encoder
 	pkt.size = 0;
 
-	AVFrame* frame = converImageToEncode(video_st->codec,inbuffer,in_width,in_height,out_width,out_height,sws_context);
+	AVFrame* frame;// = converImageToEncode(video_st->codec,inbuffer,in_width,in_height,out_width,out_height,sws_context);
 
 	int got_output;
 	if(id != turn_encode){
@@ -755,7 +753,7 @@ int createVideoFromDirectory(char* path,char* out_file,int in_width,int in_heigh
 			pDirent = pDirs[i];
 			sprintf(aux_path,"%s/%s",path,pDirent->d_name);
 
-			writeVideoFrameFromFile(aux_path,video_st,formatContext,in_width,in_height,out_width,out_height,sws_context);
+			//writeVideoFrameFromFile(aux_path,video_st,formatContext,in_width,in_height,out_width,out_height,sws_context);
 
 			i++;
 			dirNum--;
@@ -802,59 +800,7 @@ int generateVideoFromImages(char* dir,char* out_file,int in_width,int in_height,
 }
 
 
-int x;
-int y;
-int width;
-int height;
-char* path;
-char* video_path;
-char* ext;
 
-int bit_rate;
-
-struct SwsContext* sws_context;
-
-AVStream *audio_st, *video_st;
-AVFormatContext *formatContext;
-
-double audio_time, video_time;
-
-pthread_t encode_thread;
-
-volatile int exit_thread;
-volatile int record;
-
-volatile int finish_encode_frame;
-
-volatile int thread_finished;
-
-//uint8_t *bytes;
-int size;
-
-void ini(int aux_x, int aux_y,int aux_width,int aux_height,char* aux_path,char* aux_ext,int aux_bit_rate){
-	x= aux_x;
-	y = aux_y;
-	width = aux_width;
-	height = aux_height;
-	path = (char*)malloc(256*sizeof(char));
-	strcpy(path,aux_path);
-
-	ext = (char*)malloc(256*sizeof(char));
-	strcpy(ext,aux_ext);
-
-	video_path = (char*)malloc(256*sizeof(char));
-	sprintf(video_path,"%s%s",path,ext);
-
-	bit_rate = aux_bit_rate;
-
-	iniAvCodec();
-
-	exit_thread = 0;
-	record = 0;
-	thread_finished = 0;
-	finish_encode_frame = 1;
-	//ini_thread();
-}
 
 GLuint pbo_id;
 
@@ -870,119 +816,58 @@ volatile int current_image_read;
 
 volatile int saving_image;
 
-volatile uint8_t *bytes;
+uint8_t *bytes;
 
 GLuint rboId;  //render buffer id
 
+
+
+int x;
+int y;
+int width;
+int height;
+char* path;
+char* video_path;
+char* ext;
+int bit_rate;
+
+pthread_t encode_thread;
+pthread_t save_thread;
+
+volatile int exit_thread;
+volatile int record;
+
+volatile int finish_encode_frame;
+
+volatile int thread_finished;
+
+uint8_t *bytes;
+volatile int size;
+
+
 void* encodeThread(){
-	//finish_encode_frame = 1;
 
+	//int bit_rate;
 
-	finish_encode_frame = 1;
-	uint8_t *data;
+	struct SwsContext* sws_context;
 
-	int id ;
-	//while(exit_thread != 1 || current_image_encode != current_image_read){
+	AVStream *audio_st, *video_st;
+	AVFormatContext *formatContext;
 
-	char* file = (char*)malloc(256*sizeof(char));
+	double audio_time, video_time;
 
-	int aux_width = width-x;
-	int aux_height = height-y;
-
-	while(exit_thread != 1 ){
-
-		if(current_image_encode != current_image_read ){
-			finish_encode_frame = 0;
-			writeLog("Write frame");
-			//data = images[current_image_encode];
-
-			//writeVideoFrame(data,video_st,formatContext,width-x,height-y,width,height,sws_context);
-
-
-			sprintf(file,"%s%i",path,current_image_encode);
-
-			writeVideoFrameFromFile(file,video_st,formatContext,aux_width,aux_height,width,height,sws_context);
-
-			writeLog("End write frame");
-
-			//free(data);
-			//images[current_image_encode] = NULL;
-
-			//LOGE("ENCODE %i",current_image_encode);
-
-			current_image_encode++;
-			/*if(current_image_encode > NUMR_IMAGE){
-				current_image_encode = 0;
-			}*/
-			finish_encode_frame = 1;
-		}
-
-
-
-
-	}
-	free(file);
-	while(turn_encode != current_image_encode){
-		sleep(1);
-	}
-	finish_encode_frame = 1;
-
-	record = 0;
-
-
-
-	thread_finished = 1;
-}
-void* saveImage(void* bytes){
-	saving_image = 0;
-	char* file = (char*)malloc(256*sizeof(char));
-	while(exit_thread != 1){
-		if(record == 1){
-			LOGE("TO SAVE");
-			saving_image = 1;
-
-			sprintf(file,"%s%i",path,current_image_read);
-			LOGE("TO fopen");
-
-			pthread_mutex_lock(&io_mutex);
-
-			FILE *f = fopen(file,"wb");
-			LOGE("TO fwrite");
-			fwrite(bytes,sizeof(uint8_t),size,f);
-			LOGE("TO fclose");
-			fclose(f);
-
-			pthread_mutex_unlock(&io_mutex);
-
-			LOGE("TO free");
-			//free(bytes);
-			LOGE("END");
-			current_image_read++;
-
-			saving_image = 0;
-			record = 0;
-		}
-	}
-	free(file);
-
-	free(bytes);
-
-
-}
-
-int iniAvCodec(){
 	AVCodec *audio_codec, *video_codec;
 
 	av_register_all();
 
-	//AVFormatContext *formatContext;
 	avformat_alloc_output_context2(&formatContext, NULL, NULL, video_path);
 	if (!formatContext) {
 		writeLog("Could not deduce output format from file extension: using MPEG.\n");
 		avformat_alloc_output_context2(&formatContext, NULL, "mpeg", video_path);
 	}
-	if (!formatContext)
-		return 1;
+	if (!formatContext){
+		//return 1;
+	}
 
 	AVOutputFormat *format = formatContext->oformat;
 
@@ -1009,7 +894,7 @@ int iniAvCodec(){
 		openAudio(formatContext, audio_codec, audio_st);
 	}
 
-
+	av_dump_format(formatContext, 0, video_path, 1);
 	//int out_width, out_height;
 
 	int ret;
@@ -1018,7 +903,7 @@ int iniAvCodec(){
 		if (ret < 0) {
 			writeLog("Could not open '%s': %s\n", video_path,av_err2str(ret));
 			//write_log("Could not open");
-			return 1;
+			//return 1;
 		}
 	}
 
@@ -1026,20 +911,116 @@ int iniAvCodec(){
 	if (ret < 0) {
 		writeLog("Error occurred when opening output file: %s\n",av_err2str(ret));
 		//write_log("Error occurred when opening output file");
-		return 1;
+		//return 1;
 	}
-	//out_width=video_st->codec->width;
-	//out_height=video_st->codec->height;
 
-	/*char* aux_path = (char*)malloc(256*sizeof(char));
-	int i = 0;*/
-
-	//sws_context = sws_getContext(width, height, AV_PIX_FMT_BGR24, width, height,video_st->codec->pix_fmt, SWS_BICUBIC, NULL, NULL, NULL);
 	sws_context = sws_getContext(width-x, height-y, INPUT_PIX_FMT, width, height,video_st->codec->pix_fmt, SWS_BICUBIC, NULL, NULL, NULL);
 
-	size = BITS_PER_PIXEL*(width-x)*(height-y);
 
-	bytes = (uint8_t*)malloc(size*sizeof(uint8_t));
+	uint8_t *inbuffer = (uint8_t*) malloc (sizeof(uint8_t)* size);
+	AVPicture inpic, outpic;
+	AVFrame* outframe;
+
+	avpicture_alloc(&inpic, INPUT_PIX_FMT, width, height);
+	avpicture_alloc(&outpic, video_st->codec->pix_fmt, width, height);
+
+	outframe = av_frame_alloc();
+
+	*((AVPicture *)outframe) = outpic;
+
+	char* file = (char*)malloc(256*sizeof(char));
+
+	int aux_width = width-x;
+	int aux_height = height-y;
+
+	while(exit_thread != 1 ){
+
+		if(current_image_encode != current_image_read ){
+			finish_encode_frame = 0;
+			writeLog("Write frame");
+
+			sprintf(file,"%s%i",path,current_image_encode);
+
+			writeVideoFrameFromFile(outframe,outpic,inpic,inbuffer,file,video_st,formatContext,aux_width,aux_height,width,height,sws_context);
+
+			writeLog("End write frame");
+
+			current_image_encode++;
+
+			finish_encode_frame = 1;
+		}
+
+
+
+
+	}
+	free(file);
+
+	sws_freeContext(sws_context);
+
+	av_write_trailer(formatContext);
+	/* Close each codec. */
+	if (video_st){
+		closeVideo(formatContext, video_st);
+	}
+
+	if (audio_st){
+		closeAudio(formatContext, audio_st);
+	}
+
+	if (!(formatContext->oformat->flags & AVFMT_NOFILE)){
+		/* Close the output file. */
+		avio_close(formatContext->pb);
+	}
+
+	// free the stream
+	avformat_free_context(formatContext);
+
+	free(inbuffer);
+
+	av_free(inpic.data[0]);
+	av_free(outpic.data[0]);
+
+	av_frame_free(&outframe);
+
+	thread_finished = 1;
+
+	return NULL;
+}
+void* saveImage(void* args){
+	saving_image = 0;
+	char* file = (char*)malloc(256*sizeof(char));
+	FILE *f;
+	while(exit_thread != 1){
+
+		if(record == 1){
+
+			saving_image = 1;
+
+			sprintf(file,"%s%i",path,current_image_read);
+
+			pthread_mutex_lock(&io_mutex);
+
+			f = fopen(file,"wb");
+
+			fwrite(bytes,sizeof(uint8_t),size,f);
+
+			fclose(f);
+
+			pthread_mutex_unlock(&io_mutex);
+
+			current_image_read++;
+
+			saving_image = 0;
+			record = 0;
+		}
+	}
+	free(file);
+
+	return NULL;
+}
+
+void iniOpenGL(){
 
 	memset(m_pbos, 0, sizeof(m_pbos));
 
@@ -1062,16 +1043,6 @@ int iniAvCodec(){
 	current_image_read = 1;
 	current_image_encode = 1;
 
-
-
-	//memset(images,NULL,sizeof(images));
-	pthread_t ab;
-
-	pthread_create(&encode_thread,NULL,encodeThread,NULL);
-	pthread_create(&ab,NULL,saveImage,NULL);
-
-	pthread_mutex_init(&io_mutex,NULL);
-
 	exit_thread = 0;
 
 
@@ -1079,71 +1050,52 @@ int iniAvCodec(){
 		recordVideoTry();
 	}
 
-	return 0;
+	//return 0;
 }
 
 
-/*void createContext(){
-	eglDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-	write_EGL_error("eglGetDisplay");
+
+void ini(int aux_x, int aux_y,int aux_width,int aux_height,char* aux_path,char* aux_ext,int aux_bit_rate){
+	x= aux_x;
+	y = aux_y;
+	width = aux_width;
+	height = aux_height;
+	path = (char*)malloc(256*sizeof(char));
+	strcpy(path,aux_path);
+
+	ext = (char*)malloc(256*sizeof(char));
+	strcpy(ext,aux_ext);
+
+	video_path = (char*)malloc(256*sizeof(char));
+	sprintf(video_path,"%s%s",path,ext);
+
+	bit_rate = aux_bit_rate;
+
+	size = BITS_PER_PIXEL*(width-x)*(height-y);
+
+	bytes = (uint8_t*)malloc(size*sizeof(uint8_t));
 
 
-	GLuint major;
-	GLuint minor;
-	if(!eglInitialize(eglDisplay,&major,&minor)){
-		write_EGL_error("eglGetCurrentContext");
-	}
+	//iniAvCodec();
+
+	exit_thread = 0;
+	record = 0;
+	thread_finished = 0;
+	finish_encode_frame = 1;
+
+	current_image_encode = 0;
+	current_image_read = 0;
+
+	//memset(images,NULL,sizeof(images));
 
 
-	EGLContext eglMainContext = eglGetCurrentContext();
-	write_EGL_error("eglGetCurrentContext");
+	pthread_create(&encode_thread,NULL,encodeThread,NULL);
+	pthread_create(&save_thread,NULL,saveImage,NULL);
 
-	EGLint contextAttributes[] = {
-		EGL_SURFACE_TYPE, EGL_PBUFFER_BIT,
-		EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
-		EGL_RED_SIZE, 5,
-		EGL_GREEN_SIZE, 6,
-		EGL_BLUE_SIZE, 5,
-		EGL_DEPTH_SIZE, 1,
-		EGL_NONE
-	};
-	const EGLint maxConfigs = 10;
-	EGLConfig configs[maxConfigs]; // We'll only accept 10 configs
-	EGLint num_config;
-	if(!eglChooseConfig(eglDisplay,contextAttributes,configs,maxConfigs,&num_config)){
-		write_EGL_error("eglChooseConfig");
-	}
+	pthread_mutex_init(&io_mutex,NULL);
+	//ini_thread();
+}
 
-	EGLint attribList[] = {
-		EGL_WIDTH, width,
-		EGL_HEIGHT, height,
-		EGL_LARGEST_PBUFFER, EGL_TRUE,
-		EGL_NONE
-	};
-	eglSurface1 = eglCreatePbufferSurface(eglDisplay, configs[0], attribList);
-	if(eglSurface1 == EGL_NO_SURFACE){
-		write_EGL_error("eglCreatePixmapSurface");
-	}
-
-	EGLint attribLista[] = {
-		EGL_CONTEXT_CLIENT_VERSION, 2,
-		EGL_NONE
-	};
-
-	EGLContext context = eglGetCurrentContext();
-	eglContext1 = eglCreateContext(eglDisplay, configs[0], context, attribLista);
-	write_EGL_error("eglCreateContext");
-
-
-	if(!eglMakeCurrent(eglDisplay, eglSurface1, eglSurface1, eglContext1)){
-		write_EGL_error("eglMakeCurrent");
-	}
-
-	eglMainContext = eglGetCurrentContext();
-	if(eglMainContext == eglContext1){
-		write_log("YEAH FUCKING SAME");
-	}
-}*/
 void recordVideoTry(){
 	if(saving_image == 1){
 		LOGE("EXIT");
@@ -1161,10 +1113,6 @@ void recordVideoTry(){
 	fseek (f , 0 , SEEK_END);
 	int lSize = ftell (f);
 	rewind (f);
-
-	// allocate memory to contain the whole file:
-	//uint8_t *inbuffer = (uint8_t*) malloc (sizeof(uint8_t)* lSize);
-	//uint8_t *inbuffer = (uint8_t*) av_malloc (sizeof(uint8_t)* lSize);
 
 	if (bytes == NULL) {
 		fputs ("Memory error",stderr);
@@ -1261,40 +1209,25 @@ void recordVideo(){
 }
 
 void freeMemory(){
-
 	record = 0;
 
-	/*while(thread_finished == 0){
-		sleep(1);
-	}*/
 	while(current_image_read != current_image_encode){
 		sleep(1);
 	}
 	exit_thread = 1;
 
-
-	sws_freeContext(sws_context);
-	//closedir(pDirs);
-	 av_write_trailer(formatContext);
-	/* Close each codec. */
-	if (video_st){
-		closeVideo(formatContext, video_st);
+	while(thread_finished == 0){
+		sleep(1);
 	}
 
-	if (audio_st){
-		closeAudio(formatContext, audio_st);
-	}
+	pthread_join(encode_thread,NULL);
+	pthread_join(save_thread,NULL);
 
-	if (!(formatContext->oformat->flags & AVFMT_NOFILE)){
-		/* Close the output file. */
-		avio_close(formatContext->pb);
-	}
-
-	// free the stream
-	avformat_free_context(formatContext);
 
 	free(path);
 	free(ext);
+
+	free(video_path);
 
 	free(bytes);
 }
