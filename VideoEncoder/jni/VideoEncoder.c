@@ -178,8 +178,8 @@ int dirSelect(const   struct   dirent   *dir){
 }
 
 void readBytesFromFile(uint8_t *inbuffer,char* path){
-	LOGE("ENCODE fopen");
-	pthread_mutex_lock(&io_mutex);
+
+	//pthread_mutex_lock(&io_mutex);
 	FILE *img = fopen(path,"rb");
 	writeLog("filename %s\r\n", path);
 
@@ -208,7 +208,7 @@ void readBytesFromFile(uint8_t *inbuffer,char* path){
 
 	remove(path);
 
-	pthread_mutex_unlock(&io_mutex);
+	//pthread_mutex_unlock(&io_mutex);
 	//return inbuffer;
 }
 
@@ -408,21 +408,10 @@ void writeVideoFrameFromFile(AVFrame *frame,AVPicture outpic,AVPicture inpic,uin
 	//free(inbuffer);
 }
 
-volatile int turn_encode;
+//volatile int turn_encode;
 
-struct struc_args{
-	void *arg0;
-	void *arg1;
-	void *arg2;
-	void *arg3;
-	void *arg4;
-	void *arg5;
-	void *arg6;
-	void *arg7;
-	void *arg8;
-};
 
-void* writeVideoFrame(void* args){
+/*void* writeVideoFrame(void* args){
 	struct struc_args *arg = args;
 	uint8_t* inbuffer = arg->arg0;
 	AVStream *video_st = arg->arg1;
@@ -452,7 +441,7 @@ void* writeVideoFrame(void* args){
 
 	}
 
-	LOGE("Encode %i",id);
+
 	int ret = avcodec_encode_video2(video_st->codec, &pkt, frame, &got_output);
 	if (ret < 0) {
 		writeLog("Error encoding frame\n");
@@ -470,13 +459,13 @@ void* writeVideoFrame(void* args){
 
 	/*if(turn_encode > 30){
 		turn_encode = 0;
-	}*/
+	}*
 
 	av_free(frame);
 	free(inbuffer);
 
 
-}
+}*/
 
 void closeVideo(AVFormatContext *oc, AVStream *st){
 
@@ -813,13 +802,11 @@ uint8_t* images[NUMR_IMAGE];
 */
 volatile int current_image_encode;
 volatile int current_image_read;
+volatile int turn_image_read;
 
-volatile int saving_image;
-
-uint8_t *bytes;
+//volatile int saving_image;
 
 GLuint rboId;  //render buffer id
-
 
 
 int x;
@@ -842,6 +829,12 @@ volatile int finish_encode_frame;
 volatile int thread_finished;
 
 uint8_t *bytes;
+/*#define NUMR_BYTES_BUFFER 4
+uint8_t *bytes[NUMR_BYTES_BUFFER];
+volatile int current_byte_buffer_read;
+volatile int current_byte_buffer_write;*/
+
+
 volatile int size;
 
 
@@ -935,7 +928,7 @@ void* encodeThread(){
 
 	while(exit_thread != 1 ){
 
-		if(current_image_encode != current_image_read ){
+		if(current_image_encode < current_image_read ){
 			finish_encode_frame = 0;
 			writeLog("Write frame");
 
@@ -949,9 +942,6 @@ void* encodeThread(){
 
 			finish_encode_frame = 1;
 		}
-
-
-
 
 	}
 	free(file);
@@ -987,38 +977,73 @@ void* encodeThread(){
 
 	return NULL;
 }
-void* saveImage(void* args){
+/*void* saveImageLoop(void* args){
 	saving_image = 0;
+	record = 0;
 	char* file = (char*)malloc(256*sizeof(char));
 	FILE *f;
 	while(exit_thread != 1){
 
 		if(record == 1){
-
-			saving_image = 1;
-
+			LOGE("SAVE");
 			sprintf(file,"%s%i",path,current_image_read);
-
-			pthread_mutex_lock(&io_mutex);
 
 			f = fopen(file,"wb");
 
-			fwrite(bytes,sizeof(uint8_t),size,f);
+			saving_image = 1;
+			//pthread_mutex_lock(&io_mutex);
+			fwrite(bytes[current_byte_buffer_write-1],sizeof(uint8_t),size,f);
+			current_byte_buffer_write++;
+			//pthread_mutex_unlock(&io_mutex);
+			if(current_byte_buffer_write >= NUMR_BYTES_BUFFER){
+				current_byte_buffer_write = 0;
+			}
+
+			saving_image = 0;
 
 			fclose(f);
 
-			pthread_mutex_unlock(&io_mutex);
-
 			current_image_read++;
 
-			saving_image = 0;
-			record = 0;
+			//record = 0;
 		}
 	}
+	free(file);
+	return NULL;
+}*/
+
+struct struc_args{
+	void *arg0;
+	int arg1;
+};
+
+void* saveImage(void* args){
+	//saving_image = 0;
+	struct struc_args *arg = args;
+
+	uint8_t *data = arg->arg0;
+
+	int turn = arg->arg1;
+
+	char* file = (char*)malloc(256*sizeof(char));
+
+	sprintf(file,"%s%i",path,turn);
+
+	FILE *f = fopen(file,"wb");
+
+	fwrite(data,sizeof(uint8_t),size,f);
+
+	fclose(f);
+
+/*	if(turn == turn_image_read+1){
+		turn_image_read = turn;
+	}*/
+
 	free(file);
 
 	return NULL;
 }
+
 
 void iniOpenGL(){
 
@@ -1040,15 +1065,12 @@ void iniOpenGL(){
 	// backbuffer to vram pbo index
 	gpu2vram = NUMR_PBO-1;
 
-	current_image_read = 1;
-	current_image_encode = 1;
-
-	exit_thread = 0;
 
 
-	while(exit_thread != 1){
+
+	/*while(exit_thread != 1){
 		recordVideoTry();
-	}
+	}*/
 
 	//return 0;
 }
@@ -1073,7 +1095,7 @@ void ini(int aux_x, int aux_y,int aux_width,int aux_height,char* aux_path,char* 
 
 	size = BITS_PER_PIXEL*(width-x)*(height-y);
 
-	bytes = (uint8_t*)malloc(size*sizeof(uint8_t));
+	//bytes = (uint8_t*)malloc(size*sizeof(uint8_t));
 
 
 	//iniAvCodec();
@@ -1086,21 +1108,32 @@ void ini(int aux_x, int aux_y,int aux_width,int aux_height,char* aux_path,char* 
 	current_image_encode = 0;
 	current_image_read = 0;
 
+	//current_byte_buffer_read = 0;
+	//current_byte_buffer_write = 0;
+
+	exit_thread = 0;
 	//memset(images,NULL,sizeof(images));
 
+	iniOpenGL();
 
-	pthread_create(&encode_thread,NULL,encodeThread,NULL);
-	pthread_create(&save_thread,NULL,saveImage,NULL);
+	//memset(bytes,malloc(size*sizeof(uint8_t)), sizeof(NUMR_BYTES_BUFFER));
+	/*bytes[0] = (uint8_t*)malloc(size*sizeof(uint8_t));
+	bytes[1] = (uint8_t*)malloc(size*sizeof(uint8_t));
+	bytes[2] = (uint8_t*)malloc(size*sizeof(uint8_t));
+	bytes[3] = (uint8_t*)malloc(size*sizeof(uint8_t));*/
+
+	//pthread_create(&encode_thread,NULL,encodeThread,NULL);
+	//pthread_create(&save_thread,NULL,saveImage,NULL);
 
 	pthread_mutex_init(&io_mutex,NULL);
 	//ini_thread();
 }
 
 void recordVideoTry(){
-	if(saving_image == 1){
-		LOGE("EXIT");
+	/*if(saving_image == 1){
+		writeLog("EXIT");
 		return;
-	}
+	}*/
 	char *file = (char*)malloc(256*sizeof(char));
 
 	sprintf(file,"%s%i",path,0);
@@ -1138,10 +1171,10 @@ void recordVideo(){
 		writeLog("NO IMAGE");
 		return;
 	}*/
-	if(saving_image == 1){
+	/*if(saving_image == 1){
 		LOGE("EXIT");
 		return;
-	}
+	}*/
 
 	//while(finish_encode_frame != 1){
 		//Sleep();
@@ -1156,11 +1189,24 @@ void recordVideo(){
 	GLubyte *ptr = glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, size, GL_MAP_READ_BIT);
 	writeLog("glMapBufferRange");
 
-	//LOGE("READ: %i",current_image_read);
+	bytes = (uint8_t*)malloc(size*sizeof(uint8_t));
 
-	//LOGE("RECORD");
-	LOGE("MEMCPY");
 	memcpy(bytes, ptr, size);
+
+	current_image_read++;
+
+	struct struc_args args;
+	args.arg0 = bytes;
+	args.arg1 = current_image_read;
+
+	//pthread_create(&save_thread,NULL,saveImage,&args);
+	/*current_byte_buffer_read++;
+	if(current_byte_buffer_read >= NUMR_BYTES_BUFFER){
+		current_byte_buffer_read = 0;
+	}*/
+	//record = 1;
+
+	LOGE("RECORD");
 
 	//images[current_image_read] = bytes;
 
@@ -1205,7 +1251,7 @@ void recordVideo(){
 	m_pbos[NUMR_PBO - 1] = temp;
 
 	writeLog("RECORD");
-	record = 1;
+
 }
 
 void freeMemory(){
@@ -1221,7 +1267,7 @@ void freeMemory(){
 	}
 
 	pthread_join(encode_thread,NULL);
-	pthread_join(save_thread,NULL);
+	//pthread_join(save_thread,NULL);
 
 
 	free(path);
