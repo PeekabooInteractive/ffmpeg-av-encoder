@@ -15,7 +15,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "9C34FCD819124E9C00762F31"
-               BuildableName = "libffmpeg video encoder.a"
+               BuildableName = "libffmpeg-video-encoder.a"
                BlueprintName = "ffmpeg-video-encoder"
                ReferencedContainer = "container:ffmpeg-video-encoder.xcodeproj">
             </BuildableReference>
@@ -33,7 +33,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "9C34FCE819124E9C00762F31"
-               BuildableName = "ffmpeg video encoderTests.xctest"
+               BuildableName = "ffmpeg-video-encoderTests.xctest"
                BlueprintName = "ffmpeg-video-encoderTests"
                ReferencedContainer = "container:ffmpeg-video-encoder.xcodeproj">
             </BuildableReference>
