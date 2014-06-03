@@ -21,7 +21,7 @@
 #include "libavutil/opt.h"
 //#include "libavutil/channel_layout.h"
 
-#define GLES3 0
+#define GLES3 1
 
 #if GLES3
 
@@ -72,8 +72,6 @@
 
 #define INPUT_PIX_FMT AV_PIX_FMT_RGB24
 //#define INPUT_PIX_FMT AV_PIX_FMT_RGBA64
-
-#define EXPORT_API
 
 static uint8_t **src_samples_data;
 static int max_dst_nb_samples;
@@ -398,7 +396,6 @@ void writeVideoFrameFromFile(AVFrame *frame,AVPicture outpic,AVPicture inpic,uin
 
 	if (got_output) {
 		//write_log("Write frame  ");
-		LOGE("Write frame  (size=%5d)\n", pkt.size);
 		writeFrame(formatContext, &video_st->codec->time_base, video_st, &pkt);
 	}
 	av_free_packet(&pkt);
@@ -980,9 +977,8 @@ void* encodeThread(){
 
 	return NULL;
 }
-volatile int saving_image = 0;
-void* saveImageLoop(void* args){
-	//saving_image = 0;
+/*void* saveImageLoop(void* args){
+	saving_image = 0;
 	record = 0;
 	char* file = (char*)malloc(256*sizeof(char));
 	FILE *f;
@@ -996,10 +992,12 @@ void* saveImageLoop(void* args){
 
 			saving_image = 1;
 			//pthread_mutex_lock(&io_mutex);
-			fwrite(bytes,sizeof(uint8_t),size,f);
-			//current_byte_buffer_write++;
+			fwrite(bytes[current_byte_buffer_write-1],sizeof(uint8_t),size,f);
+			current_byte_buffer_write++;
 			//pthread_mutex_unlock(&io_mutex);
-
+			if(current_byte_buffer_write >= NUMR_BYTES_BUFFER){
+				current_byte_buffer_write = 0;
+			}
 
 			saving_image = 0;
 
@@ -1007,12 +1005,12 @@ void* saveImageLoop(void* args){
 
 			current_image_read++;
 
-			record = 0;
+			//record = 0;
 		}
 	}
 	free(file);
 	return NULL;
-}
+}*/
 
 struct struc_args{
 	void *arg0;
@@ -1037,14 +1035,11 @@ void* saveImage(void* args){
 
 	fclose(f);
 
-	turn_image_read++;
-	current_image_read++;
 /*	if(turn == turn_image_read+1){
 		turn_image_read = turn;
 	}*/
 
 	free(file);
-	free(data);
 
 	return NULL;
 }
@@ -1052,7 +1047,7 @@ void* saveImage(void* args){
 
 void iniOpenGL(){
 
-	/*memset(m_pbos, 0, sizeof(m_pbos));
+	memset(m_pbos, 0, sizeof(m_pbos));
 
 	if (m_pbos[0] == 0){
 		glGenBuffers(NUMR_PBO, m_pbos);
@@ -1070,7 +1065,7 @@ void iniOpenGL(){
 	// backbuffer to vram pbo index
 	gpu2vram = NUMR_PBO-1;
 
-*/
+
 
 
 	/*while(exit_thread != 1){
@@ -1100,7 +1095,7 @@ void ini(int aux_x, int aux_y,int aux_width,int aux_height,char* aux_path,char* 
 
 	size = BITS_PER_PIXEL*(width-x)*(height-y);
 
-	bytes = (uint8_t*)malloc(size*sizeof(uint8_t));
+	//bytes = (uint8_t*)malloc(size*sizeof(uint8_t));
 
 
 	//iniAvCodec();
@@ -1127,8 +1122,8 @@ void ini(int aux_x, int aux_y,int aux_width,int aux_height,char* aux_path,char* 
 	bytes[2] = (uint8_t*)malloc(size*sizeof(uint8_t));
 	bytes[3] = (uint8_t*)malloc(size*sizeof(uint8_t));*/
 
-	pthread_create(&encode_thread,NULL,encodeThread,NULL);
-	pthread_create(&save_thread,NULL,saveImageLoop,NULL);
+	//pthread_create(&encode_thread,NULL,encodeThread,NULL);
+	//pthread_create(&save_thread,NULL,saveImage,NULL);
 
 	pthread_mutex_init(&io_mutex,NULL);
 	//ini_thread();
@@ -1171,27 +1166,6 @@ void recordVideoTry(){
 
 }
 
-void EXPORT_API UnityRenderEvent (int eventID){
-	/*if(saving_image == 1){
-		return;
-	}*/
-	writeLog("RECORDDDDDDDDDDDDD");
-
-	//bytes = (uint8_t*)malloc(size*sizeof(uint8_t));
-	glReadPixels(x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, bytes);
-
-
-
-
-	//record = 1;
-
-	/*struct struc_args args;
-	args.arg0 = bytes;
-	args.arg1 = current_image_read;
-
-	pthread_create(&save_thread,NULL,saveImage,&args);*/
-}
-
 void recordVideo(){
 	/*if(images[current_image_read] != NULL){
 		writeLog("NO IMAGE");
@@ -1206,7 +1180,7 @@ void recordVideo(){
 		//Sleep();
 	//}
 	//glReadBuffer(GL_COLOR_ATTACHMENT0);
-	/*writeLog("BEGIN");
+	writeLog("BEGIN");
 	glBindBuffer(GL_PIXEL_PACK_BUFFER, m_pbos[gpu2vram]);
 	writeLog("glBindBuffer");
 
@@ -1224,7 +1198,7 @@ void recordVideo(){
 	struct struc_args args;
 	args.arg0 = bytes;
 	args.arg1 = current_image_read;
-*/
+
 	//pthread_create(&save_thread,NULL,saveImage,&args);
 	/*current_byte_buffer_read++;
 	if(current_byte_buffer_read >= NUMR_BYTES_BUFFER){
@@ -1263,7 +1237,7 @@ void recordVideo(){
 	//record = 1;
 	//pthread_create(&encode_thread,NULL,encodeImage,(void*)bytes);
 
-	/*glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+	glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
 	writeLog("glUnmapBuffer");
 	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 	writeLog("glBindBuffer");
@@ -1276,7 +1250,7 @@ void recordVideo(){
 	}
 	m_pbos[NUMR_PBO - 1] = temp;
 
-	writeLog("RECORD");*/
+	writeLog("RECORD");
 
 }
 
