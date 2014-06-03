@@ -23,6 +23,7 @@
 		9C34FD771912501200762F31 /* libavutil.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 9C34FD661912501200762F31 /* libavutil.a */; };
 		9C34FD781912501200762F31 /* libswresample.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 9C34FD671912501200762F31 /* libswresample.a */; };
 		9C34FD791912501200762F31 /* libswscale.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 9C34FD681912501200762F31 /* libswscale.a */; };
+		9C4AAE30193E1EFA0083A1F3 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9C34FCEA19124E9C00762F31 /* XCTest.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -159,6 +160,7 @@
 		9C34FD6F1912501200762F31 /* libavutil.pc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = libavutil.pc; sourceTree = "<group>"; };
 		9C34FD701912501200762F31 /* libswresample.pc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = libswresample.pc; sourceTree = "<group>"; };
 		9C34FD711912501200762F31 /* libswscale.pc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = libswscale.pc; sourceTree = "<group>"; };
+		9C4AAE2F193E1EE80083A1F3 /* VideoEncoder.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = VideoEncoder.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -173,6 +175,7 @@
 				9C34FD731912501200762F31 /* libavdevice.a in Frameworks */,
 				9C34FD771912501200762F31 /* libavutil.a in Frameworks */,
 				9C34FD791912501200762F31 /* libswscale.a in Frameworks */,
+				9C4AAE30193E1EFA0083A1F3 /* XCTest.framework in Frameworks */,
 				9C34FD751912501200762F31 /* libavformat.a in Frameworks */,
 				9C34FD721912501200762F31 /* libavcodec.a in Frameworks */,
 			);
@@ -225,6 +228,7 @@
 		9C34FCDE19124E9C00762F31 /* ffmpeg-video-encoder */ = {
 			isa = PBXGroup;
 			children = (
+				9C4AAE2F193E1EE80083A1F3 /* VideoEncoder.h */,
 				9C34FD7A1912519B00762F31 /* include */,
 				9C34FCE119124E9C00762F31 /* ffmpeg_video_encoder.h */,
 				9C34FCE319124E9C00762F31 /* ffmpeg_video_encoder.m */,
@@ -642,6 +646,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				DSTROOT = /tmp/ffmpeg_video_encoder.dst;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(DEVELOPER_FRAMEWORKS_DIR)",
+				);
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "ffmpeg video encoder/ffmpeg-video-encoder-Prefix.pch";
 				"HEADER_SEARCH_PATHS[arch=*]" = (
@@ -663,6 +671,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				DSTROOT = /tmp/ffmpeg_video_encoder.dst;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(DEVELOPER_FRAMEWORKS_DIR)",
+				);
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "ffmpeg video encoder/ffmpeg-video-encoder-Prefix.pch";
 				LIBRARY_SEARCH_PATHS = (
