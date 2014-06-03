@@ -81,9 +81,23 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE    := VideoEncoder
 LOCAL_SRC_FILES := VideoEncoder.c
-LOCAL_LDLIBS := -llog -ljnigraphics -lz -lm 
+LOCAL_LDLIBS := -llog -ljnigraphics -lz -lm  -lGLESv2 -lEGL #-lGLESv1_CM -lGLESv2
 LOCAL_SHARED_LIBRARIES := 
 LOCAL_STATIC_LIBRARIES := libavformat libavcodec libswscale libavutil libswresample libavfilter
+#LOCAL_C_INCLUDES := C:\Android\android-ndk-r8b\platforms\android-14\include
+
+include $(BUILD_SHARED_LIBRARY)
+
+
+
+
+include $(CLEAR_VARS)
+
+LOCAL_MODULE    := ImagesGenerator
+LOCAL_SRC_FILES := ImagesGenerator.cpp
+LOCAL_LDLIBS := -llog -lz -lm -lGLESv2 -lEGL  -ljnigraphics 
+LOCAL_SHARED_LIBRARIES := 
+LOCAL_STATIC_LIBRARIES :=
 
 include $(BUILD_SHARED_LIBRARY)
 
