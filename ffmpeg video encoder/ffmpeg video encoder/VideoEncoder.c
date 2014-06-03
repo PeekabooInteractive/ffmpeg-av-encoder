@@ -6,6 +6,8 @@
 // Description : Hello World in C, Ansi-style
 //============================================================================
 
+#include "VideoEncoder.h"
+
 #include <stdio.h>
 //#include <stdlib.h>
 #include <dirent.h>
@@ -1166,7 +1168,7 @@ void recordVideoTry(){
     
 }
 
-void EXPORT_API UnityRenderEvent (int eventID){
+void UnityRenderEvent (int eventID){
 	/*if(saving_image == 1){
      return;
      }*/
