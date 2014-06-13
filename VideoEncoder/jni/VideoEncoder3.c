@@ -713,7 +713,8 @@ volatile struct struc_args{
 
 volatile struct struc_args* args_buffer[NUM_THREAD];
 
-volatile int current_in_thread[NUM_THREAD];
+volatile int turn_picture[NUM_THREAD];
+volatile int lap;
 
 
 #define NUM_PICTURE NUM_THREAD*NUM_IMAGE
@@ -794,11 +795,14 @@ void* encodeThread(){
 	current_image_encode = 0;
 
 	int turn = 0;
+
 	while(exit_thread != 1 ){
 
-		if(current_image_encode <= current_in_thread[turn] ){
+		if((current_image_encode <= turn_picture[turn] && lap == 0) || lap == 1){
 			finish_encode_frame = 0;
 			writeLog("Write frame");
+
+			LOGE("Write frame %i  %i  %i",current_image_encode,turn_picture[turn],turn_picture[turn] + 1);
 
 			data = pictures[current_image_encode];
 
@@ -808,13 +812,14 @@ void* encodeThread(){
 
 			avpicture_free(&data);
 
-			LOGE("Currents: %i AND %i,   TURN %i",current_in_thread[0], current_in_thread[1] , turn);
+			LOGE("Currents: %i AND %i,   TURN %i",turn_picture[0], turn_picture[1] , turn);
 
 			LOGE("FRAME: %i",current_image_encode);
 
 			current_image_encode++;
 			if(current_image_encode >= NUM_PICTURE){
 				current_image_encode = 0;
+				lap = 0;
 			}
 
 			turn = current_image_encode % NUM_THREAD;
@@ -860,7 +865,7 @@ void* encodeThread(){
 }
 
 
-void* saveImageBatch(void* args){
+void* formatImage(void* args){
 
 	int pos = 0;
 
@@ -881,10 +886,12 @@ void* saveImageBatch(void* args){
 	avpicture_alloc(&inpic, INPUT_PIX_FMT, width, height);
 	avpicture_alloc(&outpic, STREAM_PIX_FMT, width, height);
 
+	lap = 0;
+
 	while(!exit_thread){
 		turn = args_buffer[id]->arg1;
 
-		if(pos < turn){
+		if(pos != turn){
 
 			LOGE("The Turn is %i  of Thread   %i  NUM %i",turn,id,pos_pictu);
 
@@ -896,12 +903,13 @@ void* saveImageBatch(void* args){
 			av_picture_copy(&aux,&outpic, STREAM_PIX_FMT, width, height);
 
 			pictures[pos_pictu] = aux;
-			current_in_thread[id] = pos_pictu;
+			turn_picture[id] = pos_pictu;
 
 			pos_pictu+=NUM_THREAD;
 
 			if(pos_pictu >= NUM_PICTURE){
 				pos_pictu = id;
+				lap = 1;
 			}
 
 			pos++;
@@ -974,7 +982,7 @@ void ini(int aux_x, int aux_y,int aux_in_width,int aux_in_height,int aux_out_wid
 
 	iniOpenGL();
 
-	memset(current_in_thread,-1,sizeof(current_in_thread));
+	memset(turn_picture,-1,sizeof(turn_picture));
 
 
 	pthread_create(&encode_thread,NULL,encodeThread,NULL);
@@ -990,7 +998,7 @@ void iniThreads(){
 	for(i = 0; i< NUM_THREAD;i++){
 		args_buffer[i] = malloc(sizeof(struct struc_args));
 		args_buffer[i]->arg1 = 0;
-		pthread_create(&save_thread,NULL,saveImageBatch,(void*)i);
+		pthread_create(&save_thread,NULL,formatImage,(void*)i);
 	}
 }
 
@@ -1023,6 +1031,10 @@ void recordVideo(){
 
 	LOGE("There are %i  CURRENT %i IN %i",current_image_read,id,args_buffer[id]->arg1);
 	current_image_read++;
+
+	if(current_image_read >= NUM_PICTURE){
+		current_image_read = 0;
+	}
 
 	glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
 	writeLog("glUnmapBuffer");
