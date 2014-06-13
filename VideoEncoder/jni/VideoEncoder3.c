@@ -669,23 +669,24 @@ int generateVideoFromImages(char* dir,char* out_file,int in_width,int in_height,
 	//return EXIT_SUCCESS;
 }
 
-
-
-
-GLuint pbo_id;
+//-----------------------------------------------------------------------------------------------------------------------------------
+//---------------------------------------------------------------MAIN PROGRAM--------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------------------------------------
 
 #define NUMR_PBO 5
 GLuint m_pbos[NUMR_PBO];
-int gpu2vram;
-int vram2sys;
+int current_buffer;
+int last_buffer;
 
 volatile int current_image_encode;
 volatile int current_image_read;
 
 int x;
 int y;
-int width;
-int height;
+int in_width;
+int in_height;
+int out_width;
+int out_height;
 char* video_path;
 int bit_rate;
 
@@ -694,33 +695,26 @@ pthread_t encode_thread;
 volatile int exit_thread;
 volatile int record;
 
-volatile int finish_encode_frame;
-
 volatile int thread_finished;
 
 uint8_t *bytes;
-
 
 volatile int size;
 
 #define NUM_IMAGE 200
 #define NUM_THREAD 2
-volatile struct struc_args{
+struct struc_args{
 	uint8_t* arg0[NUM_IMAGE];
 	volatile int arg1;
-	volatile int arg2;
 };
 
-volatile struct struc_args* args_buffer[NUM_THREAD];
+struct struc_args* args_buffer[NUM_THREAD];
 
-volatile int turn_picture[NUM_THREAD];
+int turn_picture[NUM_THREAD];
 volatile int lap;
-
 
 #define NUM_PICTURE NUM_THREAD*NUM_IMAGE
 volatile AVPicture pictures[NUM_PICTURE];
-//volatile int pos_picture;
-
 
 void* encodeThread(){
 	AVStream *audio_st, *video_st;
@@ -749,11 +743,11 @@ void* encodeThread(){
 	video_st = NULL;
 	audio_st = NULL;
 	if (format->video_codec != AV_CODEC_ID_NONE){
-		video_st = addStream(formatContext, &video_codec, format->video_codec,bit_rate,width,height);
+		video_st = addStream(formatContext, &video_codec, format->video_codec,bit_rate,out_width,out_height);
 	}
 
 	if (format->audio_codec != AV_CODEC_ID_NONE){
-		audio_st = addStream(formatContext, &audio_codec, format->audio_codec,bit_rate,width,height);
+		audio_st = addStream(formatContext, &audio_codec, format->audio_codec,bit_rate,out_width,out_height);
 	}
 
 	 /* Now that all the parameters are set, we can open the audio and
@@ -789,8 +783,6 @@ void* encodeThread(){
 	AVFrame* outframe;
 	outframe = av_frame_alloc();
 
-	int aux_width = width-x;
-	int aux_height = height-y;
 	AVPicture data;
 	current_image_encode = 0;
 
@@ -799,10 +791,8 @@ void* encodeThread(){
 	while(exit_thread != 1 ){
 
 		if((current_image_encode <= turn_picture[turn] && lap == 0) || lap == 1){
-			finish_encode_frame = 0;
-			writeLog("Write frame");
 
-			LOGE("Write frame %i  %i  %i",current_image_encode,turn_picture[turn],turn_picture[turn] + 1);
+			writeLog("Write frame");
 
 			data = pictures[current_image_encode];
 
@@ -811,10 +801,6 @@ void* encodeThread(){
 			writeVideoFrameFromFile(outframe,video_st,formatContext);
 
 			avpicture_free(&data);
-
-			LOGE("Currents: %i AND %i,   TURN %i",turn_picture[0], turn_picture[1] , turn);
-
-			LOGE("FRAME: %i",current_image_encode);
 
 			current_image_encode++;
 			if(current_image_encode >= NUM_PICTURE){
@@ -826,11 +812,6 @@ void* encodeThread(){
 		}
 
 	}
-
-	LOGE("Exit loop");
-	//free(file);
-
-	//sws_freeContext(sws_context);
 
 	av_write_trailer(formatContext);
 	/* Close each codec. */
@@ -850,8 +831,6 @@ void* encodeThread(){
 	// free the stream
 	avformat_free_context(formatContext);
 
-	//free(inbuffer);
-
 	//av_free(inpic.data[0]);
 	//av_free(outpic.data[0]);
 
@@ -859,11 +838,10 @@ void* encodeThread(){
 
 	thread_finished = 1;
 
-	LOGE("End thread encode");
+	writeLog("End thread encode");
 
 	return NULL;
 }
-
 
 void* formatImage(void* args){
 
@@ -876,15 +854,15 @@ void* formatImage(void* args){
 	int turn;
 	uint8_t *bytes;
 
-	struct SwsContext* sws_context = sws_getContext(width, height, INPUT_PIX_FMT, width, height,STREAM_PIX_FMT, SWS_BICUBIC, NULL, NULL, NULL);
+	struct SwsContext* sws_context = sws_getContext(in_width, in_height, INPUT_PIX_FMT, out_width, out_height,STREAM_PIX_FMT, SWS_BICUBIC, NULL, NULL, NULL);
 
 	AVPicture inpic;
 	AVPicture outpic;
 
 	AVPicture aux;
 
-	avpicture_alloc(&inpic, INPUT_PIX_FMT, width, height);
-	avpicture_alloc(&outpic, STREAM_PIX_FMT, width, height);
+	avpicture_alloc(&inpic, INPUT_PIX_FMT, in_width, in_height);
+	avpicture_alloc(&outpic, STREAM_PIX_FMT, out_width, out_height);
 
 	lap = 0;
 
@@ -893,14 +871,14 @@ void* formatImage(void* args){
 
 		if(pos != turn){
 
-			LOGE("The Turn is %i  of Thread   %i  NUM %i",turn,id,pos_pictu);
+			//LOGE("The Turn is %i  of Thread   %i  NUM %i",turn,id,pos_pictu);
 
 			bytes = args_buffer[id]->arg0[pos];
 
-			converImageToEncode(outpic,inpic,bytes,width,height,sws_context);
+			converImageToEncode(outpic,inpic,bytes,in_width,in_height,sws_context);
 
-			avpicture_alloc(&aux, STREAM_PIX_FMT, width, height);
-			av_picture_copy(&aux,&outpic, STREAM_PIX_FMT, width, height);
+			avpicture_alloc(&aux, STREAM_PIX_FMT, out_width, out_height);
+			av_picture_copy(&aux,&outpic, STREAM_PIX_FMT, out_width, out_height);
 
 			pictures[pos_pictu] = aux;
 			turn_picture[id] = pos_pictu;
@@ -917,15 +895,16 @@ void* formatImage(void* args){
 			if(pos >= NUM_IMAGE){
 				pos = 0;
 			}
-			free(bytes);
 
-			LOGE("pos %i FUCK turn %i",pos,turn);
+			free(bytes);
 		}
 
 	}
 
+	avpicture_free(&inpic);
+	avpicture_free(&outpic);
 
-	LOGE("FIN %i",id);
+	writeLog("FIN %i",id);
 
 
 	return NULL;
@@ -951,8 +930,8 @@ void iniOpenGL(){
 	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 
 	// backbuffer to vram pbo index
-	gpu2vram = NUMR_PBO-1;
-	vram2sys = 0;
+	current_buffer = NUMR_PBO-1;
+	last_buffer = 0;
 
 }
 
@@ -961,21 +940,24 @@ void iniOpenGL(){
 void ini(int aux_x, int aux_y,int aux_in_width,int aux_in_height,int aux_out_width,int aux_out_height,char* aux_path,int aux_bit_rate){
 	x= aux_x;
 	y = aux_y;
-	width = aux_in_width;
-	height = aux_in_height;
+	in_width = aux_in_width;
+	in_height = aux_in_height;
+
+	out_width = aux_out_width;
+	out_height = aux_out_height;
+
 	video_path = (char*)malloc(256*sizeof(char));
 
 	strcpy(video_path,aux_path);
 
 	bit_rate = aux_bit_rate;
 
-	size = BITS_PER_PIXEL*width*height;
+	size = BITS_PER_PIXEL*in_width*in_height;
 
 
 	exit_thread = 0;
 	record = 0;
 	thread_finished = 0;
-	finish_encode_frame = 1;
 
 	current_image_encode = 0;
 	current_image_read = 0;
@@ -1005,12 +987,12 @@ void iniThreads(){
 void recordVideo(){
 
 	writeLog("BEGIN");
-	glBindBuffer(GL_PIXEL_PACK_BUFFER, m_pbos[gpu2vram]);
+	glBindBuffer(GL_PIXEL_PACK_BUFFER, m_pbos[current_buffer]);
 	writeLog("glBindBuffer");
 
-	glReadPixels(x,y,width, height, GL_RGB, GL_UNSIGNED_BYTE, 0);
+	glReadPixels(x,y,in_width, in_height, GL_RGB, GL_UNSIGNED_BYTE, 0);
 
-	glBindBuffer(GL_PIXEL_PACK_BUFFER, m_pbos[vram2sys]);
+	glBindBuffer(GL_PIXEL_PACK_BUFFER, m_pbos[last_buffer]);
 
 	writeLog("glReadPixels");
 	GLubyte *ptr = glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, size, GL_MAP_READ_BIT);
@@ -1023,18 +1005,7 @@ void recordVideo(){
 	int id  = current_image_read % NUM_THREAD;
 	int current = args_buffer[id]->arg1;
 	args_buffer[id]->arg0[current] = bytes;
-	args_buffer[id]->arg1++;
 
-	if(args_buffer[id]->arg1 >= NUM_IMAGE){
-		args_buffer[id]->arg1 = 0;
-	}
-
-	LOGE("There are %i  CURRENT %i IN %i",current_image_read,id,args_buffer[id]->arg1);
-	current_image_read++;
-
-	if(current_image_read >= NUM_PICTURE){
-		current_image_read = 0;
-	}
 
 	glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
 	writeLog("glUnmapBuffer");
@@ -1050,6 +1021,18 @@ void recordVideo(){
 	m_pbos[NUMR_PBO - 1] = temp;
 
 
+	args_buffer[id]->arg1++;
+
+	if(args_buffer[id]->arg1 >= NUM_IMAGE){
+		args_buffer[id]->arg1 = 0;
+	}
+
+	current_image_read++;
+
+	if(current_image_read >= NUM_PICTURE){
+		current_image_read = 0;
+	}
+
 
 	writeLog("RECORD");
 
@@ -1058,7 +1041,6 @@ void recordVideo(){
 void freeMemory(){
 
 	while(current_image_read != current_image_encode){
-		LOGE("pos_picture %i and current_image_encode %i",current_image_read,current_image_encode);
 		sleep(1);
 	}
 	exit_thread = 1;
