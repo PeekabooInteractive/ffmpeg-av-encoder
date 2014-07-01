@@ -75,7 +75,9 @@
 
 //#define INPUT_AUDIO_FMT AV_SAMPLE_FMT_S16
 //#define INPUT_AUDIO_FMT AV_SAMPLE_FMT_FLT
-#define INPUT_AUDIO_FMT AV_SAMPLE_FMT_S16P
+#define INPUT_AUDIO_FMT AV_SAMPLE_FMT_S16
+
+#define INPUT_AUDIO_RATE 44100
 
 static uint8_t **src_samples_data;
 volatile static int max_dst_nb_samples;
@@ -237,8 +239,9 @@ AVStream* addStream(AVFormatContext *formatContext, AVCodec **codec,enum AVCodec
 	switch ((*codec)->type) {
 		case AVMEDIA_TYPE_AUDIO:
 			c->sample_fmt = (*codec)->sample_fmts ? (*codec)->sample_fmts[0] : AV_SAMPLE_FMT_FLTP;
-			c->bit_rate = 64000;
+			c->bit_rate = bit_rate;
 			c->sample_rate = 44100;
+
 			c->channels = 2;
 			break;
 		case AVMEDIA_TYPE_VIDEO:
@@ -385,9 +388,11 @@ void openAudio(AVFormatContext *oc, AVCodec *codec, AVStream *st)
 	tincr = 2 * M_PI * 110.0 / c->sample_rate;
 	/* increment frequency by 110 Hz per second */
 	tincr2 = 2 * M_PI * 110.0 / c->sample_rate / c->sample_rate;
+	//c->frame_size = 1024;
 	src_nb_samples = c->codec->capabilities & CODEC_CAP_VARIABLE_FRAME_SIZE ? 10000 : c->frame_size;
+	//src_nb_samples =   1024;
 	//ret = av_samples_alloc_array_and_samples(&src_samples_data, &src_samples_linesize, c->channels,src_nb_samples, AV_SAMPLE_FMT_S16, 0);
-	ret = av_samples_alloc_array_and_samples(&src_samples_data, &src_samples_linesize, c->channels,src_nb_samples, INPUT_AUDIO_FMT, 0);
+	ret = av_samples_alloc_array_and_samples(&src_samples_data, &src_samples_linesize, 2,src_nb_samples, INPUT_AUDIO_FMT, 0);
 	if (ret < 0) {
 		writeLog("Could not allocate source samples\n");
 		exit(1);
@@ -395,7 +400,13 @@ void openAudio(AVFormatContext *oc, AVCodec *codec, AVStream *st)
 	/* compute the number of converted samples: buffering is avoided
 	* ensuring that the output buffer will contain at least all the
 	* converted input samples */
-	max_dst_nb_samples = src_nb_samples;
+	//max_dst_nb_samples = src_nb_samples;
+	 //max_dst_nb_samples = av_rescale_rnd(src_nb_samples, c->sample_rate, INPUT_AUDIO_RATE , AV_ROUND_UP);
+	max_dst_nb_samples = c->frame_size;
+	 LOGE("MAX : %i CHANNELS: %i",max_dst_nb_samples,c->channels);
+
+	//int64_t dst_ch_layout = AV_CH_LAYOUT_STEREO;
+	//int64_t src_ch_layout = AV_CH_LAYOUT_STEREO;
 	/* create resampler context */
 	if (c->sample_fmt != INPUT_AUDIO_FMT) {
 
@@ -405,9 +416,12 @@ void openAudio(AVFormatContext *oc, AVCodec *codec, AVStream *st)
 			exit(1);
 		}
 		/* set options */
-		av_opt_set_int (swr_ctx, "in_channel_count", c->channels, 0);
-		av_opt_set_int (swr_ctx, "in_sample_rate", c->sample_rate, 0);
+		//av_opt_set_int(swr_ctx, "in_channel_layout", src_ch_layout, 0);
+		av_opt_set_int (swr_ctx, "in_channel_count", 2, 0);
+		av_opt_set_int (swr_ctx, "in_sample_rate", INPUT_AUDIO_RATE, 0);
 		av_opt_set_sample_fmt(swr_ctx, "in_sample_fmt", INPUT_AUDIO_FMT, 0);
+
+		//av_opt_set_int(swr_ctx, "out_channel_layout", dst_ch_layout, 0);
 		av_opt_set_int (swr_ctx, "out_channel_count", c->channels, 0);
 		av_opt_set_int (swr_ctx, "out_sample_rate", c->sample_rate, 0);
 		av_opt_set_sample_fmt(swr_ctx, "out_sample_fmt", c->sample_fmt, 0);
@@ -421,16 +435,115 @@ void openAudio(AVFormatContext *oc, AVCodec *codec, AVStream *st)
 			writeLog("Could not allocate destination samples\n");
 			exit(1);
 		}
+
+		LOGE("JODER: %i",ret);
 	}
 	else {
 		dst_samples_data = src_samples_data;
 	}
 
-
-
 	dst_samples_size = av_samples_get_buffer_size(NULL, c->channels, max_dst_nb_samples,c->sample_fmt, 0);
+
+	//dst_samples_size = av_samples_get_buffer_size( &dst_samples_linesize, c->channels, ret,c->sample_fmt, 0);
 }
 
+
+void writeAudioFrame(AVFormatContext *oc, AVStream *st,int16_t* data){
+
+	AVCodecContext *c;
+	AVPacket pkt = { 0 }; // data and size must be 0;
+	int got_packet, ret, dst_nb_samples;
+	av_init_packet(&pkt);
+	c = st->codec;
+
+	//getAudioFrame((int16_t *)src_samples_data[0], src_nb_samples, c->channels);
+	//LOGE("SAMPLE: %i",sizeof(src_samples_data));
+	LOGE("JODER: %i", av_samples_get_buffer_size(NULL, 1, src_nb_samples,INPUT_AUDIO_FMT, 0));
+	//memcpy(src_samples_data[0],data,src_nb_samples);
+	//memcpy(src_samples_data[src_nb_samples],data,src_nb_samples-1);
+
+
+	int j, i, v;
+	int16_t *q;
+	q = src_samples_data[0];
+	for (j = 0; j < src_nb_samples; j++) {
+		v = data[j];
+		for (i = 0; i < c->channels; i++){
+			*q++ = v;
+		}
+	}
+
+
+	//memcpy(src_samples_data[src_nb_samples-1],data,src_nb_samples);
+	/* convert samples from native format to destination codec format, using the resampler */
+	if (swr_ctx) {
+		LOGE("CONVERT");
+		/* compute destination number of samples */
+		dst_nb_samples = av_rescale_rnd(swr_get_delay(swr_ctx, INPUT_AUDIO_RATE) + src_nb_samples,c->sample_rate, INPUT_AUDIO_RATE, AV_ROUND_UP);
+		//dst_nb_samples = max_dst_nb_samples;
+		LOGE("MAX : %i",dst_nb_samples);
+		if (dst_nb_samples > max_dst_nb_samples) {
+			av_free(dst_samples_data[0]);
+			ret = av_samples_alloc(dst_samples_data, &dst_samples_linesize, c->channels,dst_nb_samples, c->sample_fmt, 0);
+
+			if (ret < 0){
+				LOGE("ERROR av_samples_alloc");
+				exit(1);
+			}
+
+
+			max_dst_nb_samples = dst_nb_samples;
+			dst_samples_size = av_samples_get_buffer_size(NULL, c->channels, dst_nb_samples,c->sample_fmt, 0);
+			//dst_samples_size = av_samples_get_buffer_size(&dst_samples_linesize, c->channels, ret,c->sample_fmt, 0);
+		}
+
+		/* convert to destination format */
+		ret = swr_convert(swr_ctx,dst_samples_data, dst_nb_samples,(const uint8_t **)src_samples_data, src_nb_samples);
+
+		if (ret < 0) {
+			writeLog("Error while converting\n");
+			LOGE("Error while converting\n");
+			exit(1);
+		}
+	}
+	else {
+		LOGE("NO CONVERT");
+		dst_nb_samples = src_nb_samples;
+	}
+
+	LOGE("Buffer size : %i",ret);
+	audio_frame->nb_samples = dst_nb_samples;
+	audio_frame->pts = av_rescale_q(samples_count, (AVRational){1, c->sample_rate}, c->time_base);
+	ret = avcodec_fill_audio_frame(audio_frame, c->channels, c->sample_fmt,dst_samples_data[0], dst_samples_size, 0);
+	samples_count += dst_nb_samples;
+
+	if (ret < 0) {
+		LOGE("Error avcodec_fill_audio_frame: %s\n", av_err2str(ret));
+		//write_log("Error encoding audio frame\n");
+		exit(1);
+	}
+
+	ret = avcodec_encode_audio2(c, &pkt, audio_frame, &got_packet);
+	if (ret < 0) {
+		writeLog("Error encoding audio frame: %s\n", av_err2str(ret));
+		LOGE("Error encoding audio frame: %s\n", av_err2str(ret));
+		//write_log("Error encoding audio frame\n");
+		exit(1);
+	}
+	if (!got_packet) {
+		//if (flush)
+			//audio_is_eof = 1;
+		return;
+	}
+	ret = writeFrame(oc, &c->time_base, st, &pkt);
+	if (ret < 0) {
+		writeLog("Error while writing audio frame: %s\n",av_err2str(ret));
+		LOGE("Error while writing audio frame: %s\n",av_err2str(ret));
+		//write_log("Error while writing audio frame\n");
+		exit(1);
+	}
+
+}
 
 
 /* Prepare a 16 bit dummy audio frame of 'frame_size' samples and
@@ -468,8 +581,11 @@ void writeAudioFrameAutoGenerate(AVFormatContext *oc, AVStream *st, int flush){
 				av_free(dst_samples_data[0]);
 				ret = av_samples_alloc(dst_samples_data, &dst_samples_linesize, c->channels,dst_nb_samples, c->sample_fmt, 0);
 
-				if (ret < 0)
-					exit(1);
+				if (ret < 0){
+					LOGE("ERROR");
+					//exit(1);
+				}
+
 
 				max_dst_nb_samples = dst_nb_samples;
 				dst_samples_size = av_samples_get_buffer_size(NULL, c->channels, dst_nb_samples,c->sample_fmt, 0);
@@ -480,6 +596,7 @@ void writeAudioFrameAutoGenerate(AVFormatContext *oc, AVStream *st, int flush){
 
 			if (ret < 0) {
 				writeLog("Error while converting\n");
+				LOGE("Error while converting\n");
 				exit(1);
 			}
 		}
@@ -510,76 +627,6 @@ void writeAudioFrameAutoGenerate(AVFormatContext *oc, AVStream *st, int flush){
 		//write_log("Error while writing audio frame\n");
 		exit(1);
 	}
-}
-
-void writeAudioFrame(AVFormatContext *oc, AVStream *st,int16_t* data){
-
-	AVCodecContext *c;
-	AVPacket pkt = { 0 }; // data and size must be 0;
-	int got_packet, ret, dst_nb_samples;
-	av_init_packet(&pkt);
-	c = st->codec;
-
-	//getAudioFrame((int16_t *)src_samples_data[0], src_nb_samples, c->channels);
-	//LOGE("SAMPLE: %i",sizeof(src_samples_data));
-	memcpy(src_samples_data[0],data,2*src_nb_samples);
-	/* convert samples from native format to destination codec format, using the resampler */
-	if (swr_ctx) {
-		LOGE("CONVERT");
-		/* compute destination number of samples */
-		dst_nb_samples = av_rescale_rnd(swr_get_delay(swr_ctx, c->sample_rate) + src_nb_samples,c->sample_rate, c->sample_rate, AV_ROUND_UP);
-		if (dst_nb_samples > max_dst_nb_samples) {
-			av_free(dst_samples_data[0]);
-			ret = av_samples_alloc(dst_samples_data, &dst_samples_linesize, c->channels,dst_nb_samples, c->sample_fmt, 0);
-
-			if (ret < 0){
-				exit(1);
-			}
-
-
-			max_dst_nb_samples = dst_nb_samples;
-			dst_samples_size = av_samples_get_buffer_size(NULL, c->channels, dst_nb_samples,c->sample_fmt, 0);
-		}
-
-		/* convert to destination format */
-		ret = swr_convert(swr_ctx,dst_samples_data, dst_nb_samples,(const uint8_t **)src_samples_data, src_nb_samples);
-
-		if (ret < 0) {
-			writeLog("Error while converting\n");
-			exit(1);
-		}
-	}
-	else {
-		LOGE("NO CONVERT");
-		dst_nb_samples = src_nb_samples;
-	}
-
-
-	audio_frame->nb_samples = dst_nb_samples;
-	audio_frame->pts = av_rescale_q(samples_count, (AVRational){1, c->sample_rate}, c->time_base);
-	avcodec_fill_audio_frame(audio_frame, c->channels, c->sample_fmt,dst_samples_data[0], dst_samples_size, 0);
-	samples_count += dst_nb_samples;
-
-
-
-	ret = avcodec_encode_audio2(c, &pkt, audio_frame, &got_packet);
-	if (ret < 0) {
-		writeLog("Error encoding audio frame: %s\n", av_err2str(ret));
-		//write_log("Error encoding audio frame\n");
-		exit(1);
-	}
-	if (!got_packet) {
-		//if (flush)
-			//audio_is_eof = 1;
-		return;
-	}
-	ret = writeFrame(oc, &c->time_base, st, &pkt);
-	if (ret < 0) {
-		writeLog("Error while writing audio frame: %s\n",av_err2str(ret));
-		//write_log("Error while writing audio frame\n");
-		exit(1);
-	}
-
 }
 
 void closeAudio(AVFormatContext *oc, AVStream *st){
@@ -868,22 +915,20 @@ void* encodeThread(){
 
 	finish_ini_encode_thread = 1;
 
-	audio_time = (audio_st) ? audio_st->pts.val * av_q2d(audio_st->time_base) : INFINITY;
-	video_time = (video_st) ? video_st->pts.val * av_q2d(video_st->time_base) : INFINITY;
-
 	while(exit_thread != 1 ){
 		 /* Compute current audio and video time. */
 
-
+		audio_time = (audio_st) ? audio_st->pts.val * av_q2d(audio_st->time_base) : INFINITY;
+		video_time = (video_st) ? video_st->pts.val * av_q2d(video_st->time_base) : INFINITY;
 
 		if (audio_st && audio_time <= video_time) {
-			LOGE("AUDIO TIME read: %i encode: %i",currente_sample_read,currente_sample_encode);
+			//LOGE("AUDIO TIME read: %i encode: %i",currente_sample_read,currente_sample_encode);
 			if(currente_sample_encode < currente_sample_read){
 				LOGE("AUDIO TIME1");
 				writeAudioFrame(formatContext, audio_st,audio_samples[currente_sample_encode]);
 				currente_sample_encode++;
 
-				audio_time = (audio_st) ? audio_st->pts.val * av_q2d(audio_st->time_base) : INFINITY;
+				//audio_time = (audio_st) ? audio_st->pts.val * av_q2d(audio_st->time_base) : INFINITY;
 			}
 
 		}
@@ -909,7 +954,7 @@ void* encodeThread(){
 
 				turn = current_image_encode % NUM_THREAD;
 
-				video_time = (video_st) ? video_st->pts.val * av_q2d(video_st->time_base) : INFINITY;
+				//video_time = (video_st) ? video_st->pts.val * av_q2d(video_st->time_base) : INFINITY;
 			}
 		}
 
@@ -1074,11 +1119,16 @@ void ini(int aux_x, int aux_y,int aux_in_width,int aux_in_height,int aux_out_wid
 	memset(audio_samples,NULL,sizeof(audio_samples));
 
 	finish_ini_encode_thread = 0;
+	LOGE("SHIT1 %i",finish_ini_encode_thread);
 	pthread_create(&encode_thread,NULL,encodeThread,NULL);
 
 
 
 	iniThreads();
+
+	while(finish_ini_encode_thread != 1){
+		//LOGE("SHIT2 %i",finish_ini_encode_thread);
+	}
 }
 
 void iniThreads(){
@@ -1147,21 +1197,30 @@ void recordVideo(){
 
 int num_copied = 0;
 void recordSample(int16_t* data,int size){
-	if(finish_ini_encode_thread != 1){
+	/*if(finish_ini_encode_thread != 1){
 		return;
-	}
-	int nb_sample = 2 * src_nb_samples;
+	}*/
+	int nb_sample = src_nb_samples;
 	if(audio_samples[currente_sample_read] == NULL){
 		audio_samples[currente_sample_read] = malloc(nb_sample*sizeof(int16_t));
+		memset(audio_samples[currente_sample_read], 0, nb_sample*sizeof(int16_t));
 	}
 
 	int num_to_copy;
 	int pos = num_copied;
 	num_copied += size;
-	LOGE("SHIT %i",nb_sample);
+	LOGE("SHIT %i",src_nb_samples);
+	LOGE("FUCK %i",size);
 	if(num_copied <= nb_sample){
 		//audio_samples[currente_sample_read] = malloc(src_nb_samples*sizeof(float));
 		memcpy(&audio_samples[currente_sample_read][pos],data,size*sizeof(int16_t));
+		/*int i;
+		int aux = 0;
+		for(i=0;i<size;i++){
+			audio_samples[currente_sample_read][pos+aux] = data[i];
+			audio_samples[currente_sample_read][pos+aux+1] = data[i];
+			aux += 2;
+		}*/
 
 		LOGE("LESS %i",pos);
 	}
@@ -1171,20 +1230,109 @@ void recordSample(int16_t* data,int size){
 
 		int num = nb_sample - pos;
 
-		memcpy(&audio_samples[currente_sample_read][pos],data,num*sizeof(int16_t));
+		memcpy(&audio_samples[currente_sample_read][pos],&data[0],num*sizeof(int16_t));
+		/*int i;
+		int aux = 0;
+		for(i=0;i<num;i++){
+			audio_samples[currente_sample_read][pos+aux] = data[i];
+			audio_samples[currente_sample_read][pos+aux+1] = data[i];
+
+			aux += 2;
+		}*/
 
 		currente_sample_read++;
 
 		audio_samples[currente_sample_read] = malloc(nb_sample*sizeof(int16_t));
-		memcpy(&audio_samples[currente_sample_read][0],data,num_copied*sizeof(int16_t));
+		memset(audio_samples[currente_sample_read], 0,nb_sample*sizeof(int16_t));
+
+		memcpy(&audio_samples[currente_sample_read][0],&data[num],num_copied*sizeof(int16_t));
+		/*aux = 0;
+		for(i=0;i<num_copied;i++){
+			audio_samples[currente_sample_read][aux] = data[i];
+			audio_samples[currente_sample_read][aux+1] = data[i];
+			aux += 2;
+		}
+*/
+		LOGE("MORE %i %i",pos,num_copied);
+	}
+
+	if(num_copied == src_nb_samples){
+		currente_sample_read++;
+		num_copied = 0;
+	}
+	/*memcpy(audio_samples[currente_sample_read],data,size*sizeof(int16_t));
+	currente_sample_read++;*/
+
+
+	//currente_sample_read++;
+}
+
+
+void recordSampleOld(int16_t* data,int size){
+	/*if(finish_ini_encode_thread != 1){
+		return;
+	}*/
+	int nb_sample = src_nb_samples;
+	if(audio_samples[currente_sample_read] == NULL){
+		audio_samples[currente_sample_read] = malloc(nb_sample*sizeof(int16_t));
+		memset(audio_samples[currente_sample_read], 0, nb_sample*sizeof(int16_t));
+	}
+
+	int num_to_copy;
+	int pos = num_copied;
+	num_copied += size;
+	LOGE("SHIT %i",src_nb_samples);
+	LOGE("FUCK %i",size);
+	if(num_copied <= nb_sample){
+		//audio_samples[currente_sample_read] = malloc(src_nb_samples*sizeof(float));
+		memcpy(&audio_samples[currente_sample_read][pos],data,size*sizeof(int16_t));
+		/*int i;
+		int aux = 0;
+		for(i=0;i<size;i++){
+			memcpy(&audio_samples[currente_sample_read][pos+aux],&data[i],1*sizeof(int16_t));
+			memcpy(&audio_samples[currente_sample_read][pos+aux+1],&data[i],1*sizeof(int16_t));
+			aux += 2;
+		}*/
+
+		LOGE("LESS %i",pos);
+	}
+	else {
+		pos = num_copied - size;
+		num_copied = num_copied - nb_sample;
+
+		int num = nb_sample - pos;
+
+		memcpy(&audio_samples[currente_sample_read][pos],&data[0],num*sizeof(int16_t));
+		/*int i;
+		int aux = 0;
+		for(i=0;i<num;i++){
+			memcpy(&audio_samples[currente_sample_read][pos+aux],&data[i],1*sizeof(int16_t));
+			memcpy(&audio_samples[currente_sample_read][pos+aux+1],&data[i],1*sizeof(int16_t));
+			aux += 2;
+		}*/
+
+		currente_sample_read++;
+
+		audio_samples[currente_sample_read] = malloc(nb_sample*sizeof(int16_t));
+		memset(audio_samples[currente_sample_read], 0, nb_sample*sizeof(int16_t));
+
+		memcpy(&audio_samples[currente_sample_read][0],&data[num],num_copied*sizeof(int16_t));
+		/*aux = 0;
+		for(i=0;i<num_copied;i++){
+			memcpy(&audio_samples[currente_sample_read][aux],&data[i],1*sizeof(int16_t));
+			memcpy(&audio_samples[currente_sample_read][aux+1],&data[i],1*sizeof(int16_t));
+			aux += 2;
+		}*/
 
 		LOGE("MORE %i %i",pos,num_copied);
 	}
 
 	if(num_copied == src_nb_samples){
 		currente_sample_read++;
+		num_copied = 0;
 	}
-
+	/*memcpy(audio_samples[currente_sample_read],data,size*sizeof(int16_t));
+	currente_sample_read++;*/
 
 
 	//currente_sample_read++;
@@ -1195,9 +1343,9 @@ float freeMemory(){
 	if(current_image_read != current_image_encode){
 		return current_image_encode/current_image_read;
 	}
-	if(currente_sample_read != currente_sample_encode){
+	/*if(currente_sample_read != currente_sample_encode){
 		return 0.9f;
-	}
+	}*/
 	LOGE("IT's finish");
 	exit_thread = 1;
 

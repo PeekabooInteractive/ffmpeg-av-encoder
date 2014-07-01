@@ -798,7 +798,7 @@ GLuint pbo_id;
 
 #define NUMR_PBO 4
 GLuint m_pbos[NUMR_PBO];
-int gpu2vram;
+int current_buffer;
 
 /*#define NUMR_IMAGE 30
 uint8_t* images[NUMR_IMAGE];
