@@ -77,7 +77,7 @@
 //#define INPUT_AUDIO_FMT AV_SAMPLE_FMT_FLT
 #define INPUT_AUDIO_FMT AV_SAMPLE_FMT_S16
 
-#define INPUT_AUDIO_RATE 24000
+#define INPUT_AUDIO_RATE 44100
 
 static uint8_t **src_samples_data;
 volatile static int max_dst_nb_samples;
@@ -397,7 +397,7 @@ void openAudio(AVFormatContext *oc, AVCodec *codec, AVStream *st)
 	tincr2 = 2 * M_PI * 110.0 / c->sample_rate / c->sample_rate;
 	//c->frame_size = 1024;
 	//src_nb_samples = c->frame_size;//av_get_channel_layout_nb_channels(AV_CH_LAYOUT_STEREO);//c->codec->capabilities & CODEC_CAP_VARIABLE_FRAME_SIZE ? 10000 : c->frame_size;
-	src_nb_samples =   1024;
+	src_nb_samples =   c->frame_size;
 	//ret = av_samples_alloc_array_and_samples(&src_samples_data, &src_samples_linesize, c->channels,src_nb_samples, AV_SAMPLE_FMT_S16, 0);
 	ret = av_samples_alloc_array_and_samples(&src_samples_data, &src_samples_linesize, 2,src_nb_samples, INPUT_AUDIO_FMT, 0);
 	if (ret < 0) {
@@ -496,13 +496,13 @@ void writeAudioFrame(AVFormatContext *oc, AVStream *st,int16_t* data){
 
 
 			max_dst_nb_samples = dst_nb_samples;
-			//dst_samples_size = av_samples_get_buffer_size(NULL, c->channels, dst_nb_samples,c->sample_fmt, 0);
+			dst_samples_size = av_samples_get_buffer_size(NULL, c->channels, dst_nb_samples,c->sample_fmt, 0);
 			//dst_samples_size = av_samples_get_buffer_size(&dst_samples_linesize, c->channels, ret,c->sample_fmt, 0);
 		}
 
 		/* convert to destination format */
 		ret = swr_convert(swr_ctx,dst_samples_data, dst_nb_samples,(const uint8_t **)src_samples_data, src_nb_samples);
-		dst_samples_size = av_samples_get_buffer_size(&dst_samples_linesize, c->channels, ret,c->sample_fmt, 1);
+		//dst_samples_size = av_samples_get_buffer_size(&dst_samples_linesize, c->channels, ret,c->sample_fmt, 0);
 		if (ret < 0) {
 			writeLog("Error while converting\n");
 			LOGE("Error while converting\n");
@@ -514,17 +514,17 @@ void writeAudioFrame(AVFormatContext *oc, AVStream *st,int16_t* data){
 		dst_nb_samples = src_nb_samples;
 	}
 
-	audio_frame->nb_samples = dst_nb_samples;
-	audio_frame->pts = av_rescale_q(1, (AVRational){1, c->sample_rate}, c->time_base);//av_frame_get_best_effort_timestamp(audio_frame);//av_rescale_q(1, (AVRational){1, c->sample_rate}, c->time_base);
-	LOGE("JODER %i %i %i",dst_nb_samples,src_nb_samples,ret);
+	audio_frame->nb_samples = c->frame_size;
+	audio_frame->pts = av_rescale_q(samples_count, (AVRational){1, c->sample_rate}, c->time_base);//av_frame_get_best_effort_timestamp(audio_frame);//av_rescale_q(1, (AVRational){1, c->sample_rate}, c->time_base);
+	LOGE("JODER %i %i %i %i",dst_nb_samples,src_nb_samples,ret,audio_frame->nb_samples);
 
-	audio_frame->sample_rate = c->sample_rate;
+	/*audio_frame->sample_rate = c->sample_rate;
 	audio_frame->format = c->sample_fmt;
 	audio_frame->channel_layout = c->channel_layout;
-	audio_frame->nb_samples = dst_nb_samples;
-	av_frame_get_buffer(audio_frame, 0);
+	audio_frame->nb_samples = dst_nb_samples;*/
+	//av_frame_get_buffer(audio_frame, 0);
 
-	av_frame_make_writable(audio_frame);
+	//av_frame_make_writable(audio_frame);
 
 	ret = avcodec_fill_audio_frame(audio_frame, c->channels, c->sample_fmt,dst_samples_data[0], dst_samples_size, 0);
 	samples_count += dst_nb_samples;
