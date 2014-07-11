@@ -11,7 +11,7 @@
 		9C34FCEB19124E9C00762F31 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9C34FCEA19124E9C00762F31 /* XCTest.framework */; };
 		9C34FCEC19124E9C00762F31 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9C34FCDC19124E9C00762F31 /* Foundation.framework */; };
 		9C34FCEE19124E9C00762F31 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9C34FCED19124E9C00762F31 /* UIKit.framework */; };
-		9C34FCF119124E9C00762F31 /* libffmpeg-video-encoder.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 9C34FCD919124E9C00762F31 /* libffmpeg-video-encoder.a */; };
+		9C34FCF119124E9C00762F31 /* libVideoEncoder.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 9C34FCD919124E9C00762F31 /* libVideoEncoder.a */; };
 		9C34FCF719124E9C00762F31 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 9C34FCF519124E9C00762F31 /* InfoPlist.strings */; };
 		9C34FCF919124E9C00762F31 /* ffmpeg_video_encoderTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 9C34FCF819124E9C00762F31 /* ffmpeg_video_encoderTests.m */; };
 		9C34FD0319124F1D00762F31 /* VideoEncoder.c in Sources */ = {isa = PBXBuildFile; fileRef = 9C34FD0219124F1D00762F31 /* VideoEncoder.c */; };
@@ -49,7 +49,10 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		9C34FCD919124E9C00762F31 /* libffmpeg-video-encoder.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libffmpeg-video-encoder.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		6BA7A2D919702AFC00F894F2 /* libbz2.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libbz2.dylib; path = usr/lib/libbz2.dylib; sourceTree = SDKROOT; };
+		6BA7A2DB19702B0300F894F2 /* libz.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libz.dylib; path = usr/lib/libz.dylib; sourceTree = SDKROOT; };
+		6BA7A2DD19702B0B00F894F2 /* libiconv.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libiconv.dylib; path = usr/lib/libiconv.dylib; sourceTree = SDKROOT; };
+		9C34FCD919124E9C00762F31 /* libVideoEncoder.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libVideoEncoder.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		9C34FCDC19124E9C00762F31 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		9C34FCE019124E9C00762F31 /* ffmpeg-video-encoder-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ffmpeg-video-encoder-Prefix.pch"; sourceTree = "<group>"; };
 		9C34FCE119124E9C00762F31 /* ffmpeg_video_encoder.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ffmpeg_video_encoder.h; sourceTree = "<group>"; };
@@ -188,7 +191,7 @@
 				9C34FCEB19124E9C00762F31 /* XCTest.framework in Frameworks */,
 				9C34FCEE19124E9C00762F31 /* UIKit.framework in Frameworks */,
 				9C34FCEC19124E9C00762F31 /* Foundation.framework in Frameworks */,
-				9C34FCF119124E9C00762F31 /* libffmpeg-video-encoder.a in Frameworks */,
+				9C34FCF119124E9C00762F31 /* libVideoEncoder.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -208,7 +211,7 @@
 		9C34FCDA19124E9C00762F31 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				9C34FCD919124E9C00762F31 /* libffmpeg-video-encoder.a */,
+				9C34FCD919124E9C00762F31 /* libVideoEncoder.a */,
 				9C34FCE919124E9C00762F31 /* ffmpeg-video-encoderTests.xctest */,
 			);
 			name = Products;
@@ -217,6 +220,9 @@
 		9C34FCDB19124E9C00762F31 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				6BA7A2DD19702B0B00F894F2 /* libiconv.dylib */,
+				6BA7A2DB19702B0300F894F2 /* libz.dylib */,
+				6BA7A2D919702AFC00F894F2 /* libbz2.dylib */,
 				9C34FD601912501200762F31 /* lib */,
 				9C34FCDC19124E9C00762F31 /* Foundation.framework */,
 				9C34FCEA19124E9C00762F31 /* XCTest.framework */,
@@ -476,7 +482,7 @@
 			);
 			name = "ffmpeg-video-encoder";
 			productName = "ffmpeg video encoder";
-			productReference = 9C34FCD919124E9C00762F31 /* libffmpeg-video-encoder.a */;
+			productReference = 9C34FCD919124E9C00762F31 /* libVideoEncoder.a */;
 			productType = "com.apple.product-type.library.static";
 		};
 		9C34FCE819124E9C00762F31 /* ffmpeg-video-encoderTests */ = {
@@ -662,7 +668,7 @@
 					"$(PROJECT_DIR)/lib",
 				);
 				OTHER_LDFLAGS = "-ObjC";
-				PRODUCT_NAME = "ffmpeg-video-encoder";
+				PRODUCT_NAME = VideoEncoder;
 				SKIP_INSTALL = YES;
 			};
 			name = Debug;
@@ -682,7 +688,7 @@
 					"$(PROJECT_DIR)/lib",
 				);
 				OTHER_LDFLAGS = "-ObjC";
-				PRODUCT_NAME = "ffmpeg-video-encoder";
+				PRODUCT_NAME = VideoEncoder;
 				SKIP_INSTALL = YES;
 			};
 			name = Release;
