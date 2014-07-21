@@ -1328,3 +1328,34 @@ float freeMemory(){
 	return 1;
 }
 
+/*JavaVM*		java_vm;
+jobject		JavaClass;
+jmethodID	getActivityCacheDir;
+
+jint JNI_OnLoad(JavaVM* vm, void* reserved){
+
+	java_vm = vm;
+
+	// attach our thread to the java vm; obviously it's already attached but this way we get the JNIEnv..
+	JNIEnv* jni_env = 0;
+	java_vm->AttachCurrentThread(&jni_env, 0);
+
+	// first we try to find our main activity..
+	jclass cls_Activity		= jni_env->FindClass("com/unity3d/player/UnityPlayer");
+	jfieldID fid_Activity	= jni_env->GetStaticFieldID(cls_Activity, "currentActivity", "Landroid/app/Activity;");
+	jobject obj_Activity	= jni_env->GetStaticObjectField(cls_Activity, fid_Activity);
+
+	// create a JavaClass object...
+	jclass cls_JavaClass	= jni_env->FindClass("co/uk/peekaboo/videoencoder/VideoUploader");
+	jmethodID mid_JavaClass	= jni_env->GetMethodID(cls_JavaClass, "<init>", "()V");
+	jobject obj_JavaClass	= jni_env->NewObject(cls_JavaClass, mid_JavaClass, obj_Activity);
+
+	// create a global reference to the JavaClass object and fetch method id(s)..
+	JavaClass			= jni_env->NewGlobalRef(obj_JavaClass);
+	getActivityCacheDir	= jni_env->GetMethodID(cls_JavaClass, "UploadVideo", "()V;");
+
+
+	return JNI_VERSION_1_6;		// minimum JNI version
+
+}*/
+
