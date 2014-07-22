@@ -1,5 +1,12 @@
 package co.uk.peekaboo.videoencoder;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.util.List;
+
 import android.util.Log;
 
 import com.google.api.client.auth.oauth2.Credential;
@@ -14,12 +21,6 @@ import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.client.util.store.DataStore;
 import com.google.api.client.util.store.FileDataStoreFactory;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.util.List;
 
 /**
  * Shared class used by every sample. Contains methods for authorizing a user and caching credentials.
@@ -47,12 +48,20 @@ public class Auth {
      * @param scopes              list of scopes needed to run youtube upload.
      * @param credentialDatastore name of the credential datastore to cache OAuth tokens
      */
-    public static Credential authorize(List<String> scopes, String credentialDatastore) throws IOException {
-
+    public static Credential authorize(List<String> scopes, String credentialDatastore,InputStream stream ) throws IOException {
+    	Log.e("VideoUploader", "DONE1");
         // Load client secrets.
-        Reader clientSecretReader = new InputStreamReader(Auth.class.getResourceAsStream("/client_secrets.json"));
+    	//InputStream aux = Auth.class.getClassLoader().getResourceAsStream("/client_secrets.json");
+    	//InputStream aux = Auth.class.getClassLoader()
+    	if(stream == null){
+    		Log.e("VideoUploader", "NULL");
+    	}
+    	Log.e("VideoUploader", "DONE1");
+        Reader clientSecretReader = new InputStreamReader(stream);//Auth.class.getResourceAsStream("client_secrets.json"));
+        Log.e("VideoUploader", "DONE2");
+        
         GoogleClientSecrets clientSecrets = GoogleClientSecrets.load(JSON_FACTORY, clientSecretReader);
-
+        Log.e("VideoUploader", "DONE3");
         // Checks that the defaults have been replaced (Default = "Enter X here").
         if (clientSecrets.getDetails().getClientId().startsWith("Enter")
                 || clientSecrets.getDetails().getClientSecret().startsWith("Enter ")) {

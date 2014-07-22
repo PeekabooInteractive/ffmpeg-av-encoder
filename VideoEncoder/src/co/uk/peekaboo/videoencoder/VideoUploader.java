@@ -1,28 +1,27 @@
 package co.uk.peekaboo.videoencoder;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
-import com.unity3d.player.UnityPlayerActivity;
+import android.content.Context;
 import android.os.Bundle;
 import android.util.Log;
-
-
-
 
 import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.client.googleapis.media.MediaHttpUploader;
 import com.google.api.client.googleapis.media.MediaHttpUploaderProgressListener;
 import com.google.api.client.http.InputStreamContent;
-//import com.google.api.services.samples.youtube.cmdline.Auth;
 import com.google.api.services.youtube.YouTube;
 import com.google.api.services.youtube.model.Video;
 import com.google.api.services.youtube.model.VideoSnippet;
 import com.google.api.services.youtube.model.VideoStatus;
 import com.google.common.collect.Lists;
+import com.unity3d.player.UnityPlayerActivity;
+//import com.google.api.services.samples.youtube.cmdline.Auth;
 
 
 
@@ -40,7 +39,9 @@ public class VideoUploader extends UnityPlayerActivity {
      */
     private static final String VIDEO_FILE_FORMAT = "video/*";
 
-    //private static final String SAMPLE_VIDEO_FILENAME = "sample-video.mp4";
+    private static final String SAMPLE_VIDEO_FILENAME = "sample-video.mp4";
+    
+    public static Context context;
 
 
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,8 +49,9 @@ public class VideoUploader extends UnityPlayerActivity {
 		// call UnityPlayerActivity.onCreate()
 		super.onCreate(savedInstanceState);
 		
+		context = this;
 		// print debug message to logcat
-		Log.e("OverrideActivity", "onCreate called!");
+		Log.e("VideoUploader", "onCreate called!");
     }
 
     public void onBackPressed(){
@@ -58,23 +60,25 @@ public class VideoUploader extends UnityPlayerActivity {
 	    // super.onBackPressed();
     }
   
-    public static void UploadVideo(String path){
+    public static void  UploadVideo(){
     	Log.e("VideoUploader", "EXECUTE!!!!!!!!!!");
     	
-
+    	
         // This OAuth 2.0 access scope allows an application to upload files
         // to the authenticated user's YouTube channel, but doesn't allow
         // other types of access.
         List<String> scopes = Lists.newArrayList("https://www.googleapis.com/auth/youtube.upload");
 
         try {
+        	
+        	InputStream input = context.getAssets().open("client_secrets.json");
         	// Authorize the request.
-            Credential credential = Auth.authorize(scopes, "uploadvideo");
+            Credential credential = Auth.authorize(scopes, "uploadvideo",input);
 
             // This object is used to make YouTube Data API requests.
             youtube = new YouTube.Builder(Auth.HTTP_TRANSPORT, Auth.JSON_FACTORY, credential).setApplicationName("VideoUploader").build();
 
-            Log.e("VideoUploader","Uploading: " + path);
+            Log.e("VideoUploader","Uploading: " + SAMPLE_VIDEO_FILENAME);
 
             // Add extra information to the video before uploading.
             Video videoObjectDefiningMetadata = new Video();
@@ -108,7 +112,7 @@ public class VideoUploader extends UnityPlayerActivity {
             // Add the completed snippet object to the video resource.
             videoObjectDefiningMetadata.setSnippet(snippet);
 
-            InputStreamContent mediaContent = new InputStreamContent(VIDEO_FILE_FORMAT,VideoUploader.class.getResourceAsStream(path));
+            InputStreamContent mediaContent = new InputStreamContent(VIDEO_FILE_FORMAT,VideoUploader.class.getResourceAsStream(SAMPLE_VIDEO_FILENAME));
 
             // Insert the video. The command sends three arguments. The first
             // specifies which information the API request is setting and which
@@ -166,8 +170,7 @@ public class VideoUploader extends UnityPlayerActivity {
             Log.e("VideoUploader","  - Video Count: " + returnedVideo.getStatistics().getViewCount());
 
         } catch (GoogleJsonResponseException e) {
-            System.err.println("GoogleJsonResponseException code: " + e.getDetails().getCode() + " : "
-                    + e.getDetails().getMessage());
+            System.err.println("GoogleJsonResponseException code: " + e.getDetails().getCode() + " : " + e.getDetails().getMessage());
             e.printStackTrace();
         } catch (IOException e) {
             System.err.println("IOException: " + e.getMessage());
