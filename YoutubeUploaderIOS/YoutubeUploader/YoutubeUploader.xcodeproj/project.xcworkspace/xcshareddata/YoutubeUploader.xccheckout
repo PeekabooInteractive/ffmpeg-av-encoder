@@ -5,22 +5,20 @@
 	<key>IDESourceControlProjectFavoriteDictionaryKey</key>
 	<false/>
 	<key>IDESourceControlProjectIdentifier</key>
-	<string>B4129338-04E4-4845-ACCB-0A8781721411</string>
+	<string>17A059FD-CA91-4E17-9133-4E839BF51AAD</string>
 	<key>IDESourceControlProjectName</key>
-	<string>ffmpeg-video-encoder</string>
+	<string>YoutubeUploader</string>
 	<key>IDESourceControlProjectOriginsDictionary</key>
 	<dict>
 		<key>BBD17294-53CE-4FBD-A263-638C094D8603</key>
 		<string>https://github.com/PeekabooInteractive/ffmpeg-av-encoder.git</string>
 	</dict>
 	<key>IDESourceControlProjectPath</key>
-	<string>ffmpeg video encoder/ffmpeg-video-encoder.xcodeproj/project.xcworkspace</string>
+	<string>YoutubeUploaderIOS/YoutubeUploader/YoutubeUploader.xcodeproj/project.xcworkspace</string>
 	<key>IDESourceControlProjectRelativeInstallPathDictionary</key>
 	<dict>
 		<key>BBD17294-53CE-4FBD-A263-638C094D8603</key>
-		<string>../../..</string>
-		<key>CAD5BF75-8BCE-45B5-9305-63D875C1618A</key>
-		<string>../../../YouyubeUploadIOS/YoutubeUpload</string>
+		<string>../../../..</string>
 	</dict>
 	<key>IDESourceControlProjectURL</key>
 	<string>https://github.com/PeekabooInteractive/ffmpeg-av-encoder.git</string>
@@ -37,14 +35,6 @@
 			<string>BBD17294-53CE-4FBD-A263-638C094D8603</string>
 			<key>IDESourceControlWCCName</key>
 			<string>ffmpeg-av-encoder</string>
-		</dict>
-		<dict>
-			<key>IDESourceControlRepositoryExtensionIdentifierKey</key>
-			<string>public.vcs.git</string>
-			<key>IDESourceControlWCCIdentifierKey</key>
-			<string>CAD5BF75-8BCE-45B5-9305-63D875C1618A</string>
-			<key>IDESourceControlWCCName</key>
-			<string>YoutubeUpload</string>
 		</dict>
 	</array>
 </dict>
