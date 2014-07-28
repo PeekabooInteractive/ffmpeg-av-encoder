@@ -229,8 +229,8 @@ public class VideoUploader extends UnityPlayerActivity {
             // Most of the video's metadata is set on the VideoSnippet object.
             VideoSnippet snippet = new VideoSnippet();
 
-            snippet.setTitle("Test Upload via Java on "+title);
-            snippet.setDescription("Video uploaded via YouTube Data API V3 using the Java library"+description);
+            snippet.setTitle(title);
+            snippet.setDescription(description);
 
             // Set the keyword tags that you want to associate with the video.
             List<String> tags = new ArrayList<String>(Arrays.asList(tag));
