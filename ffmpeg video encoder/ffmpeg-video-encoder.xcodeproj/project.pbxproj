@@ -49,9 +49,6 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		6BA7A2D919702AFC00F894F2 /* libbz2.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libbz2.dylib; path = usr/lib/libbz2.dylib; sourceTree = SDKROOT; };
-		6BA7A2DB19702B0300F894F2 /* libz.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libz.dylib; path = usr/lib/libz.dylib; sourceTree = SDKROOT; };
-		6BA7A2DD19702B0B00F894F2 /* libiconv.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libiconv.dylib; path = usr/lib/libiconv.dylib; sourceTree = SDKROOT; };
 		9C34FCD919124E9C00762F31 /* libVideoEncoder.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libVideoEncoder.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		9C34FCDC19124E9C00762F31 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		9C34FCE019124E9C00762F31 /* ffmpeg-video-encoder-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ffmpeg-video-encoder-Prefix.pch"; sourceTree = "<group>"; };
@@ -220,9 +217,6 @@
 		9C34FCDB19124E9C00762F31 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				6BA7A2DD19702B0B00F894F2 /* libiconv.dylib */,
-				6BA7A2DB19702B0300F894F2 /* libz.dylib */,
-				6BA7A2D919702AFC00F894F2 /* libbz2.dylib */,
 				9C34FD601912501200762F31 /* lib */,
 				9C34FCDC19124E9C00762F31 /* Foundation.framework */,
 				9C34FCEA19124E9C00762F31 /* XCTest.framework */,
@@ -651,6 +645,7 @@
 		9C34FCFD19124E9C00762F31 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = armv7;
 				DSTROOT = /tmp/ffmpeg_video_encoder.dst;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -670,12 +665,14 @@
 				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_NAME = VideoEncoder;
 				SKIP_INSTALL = YES;
+				VALID_ARCHS = "armv7 armv7s";
 			};
 			name = Debug;
 		};
 		9C34FCFE19124E9C00762F31 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = armv7;
 				DSTROOT = /tmp/ffmpeg_video_encoder.dst;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -690,6 +687,7 @@
 				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_NAME = VideoEncoder;
 				SKIP_INSTALL = YES;
+				VALID_ARCHS = "armv7 armv7s";
 			};
 			name = Release;
 		};

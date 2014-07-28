@@ -24,7 +24,7 @@
 #define PLATFORM_ANDROID 0
 #define PLATFORM_IOS 1
 
-#define GLES3 1
+#define GLES3 0
 
 #if PLATFORM_ANDROID
 
@@ -1118,7 +1118,7 @@ void* formatImage(void* args){
 
 
 void iniOpenGL(){
-    
+#if GLES3
 	memset(m_pbos, 0, sizeof(m_pbos));
     
 	if (m_pbos[0] == 0){
@@ -1133,6 +1133,8 @@ void iniOpenGL(){
 	}
     
 	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+    
+#endif
     
 	// backbuffer to vram pbo index
 	current_buffer = NUMR_PBO-1;
@@ -1204,7 +1206,7 @@ void ini(int aux_x, int aux_y,int aux_in_width,int aux_in_height,int aux_out_wid
 
 
 void recordVideo(){
-    
+#if GLES3
 	writeLog("BEGIN");
 	glBindBuffer(GL_PIXEL_PACK_BUFFER, m_pbos[current_buffer]);
 	writeLog("glBindBuffer");
@@ -1221,6 +1223,29 @@ void recordVideo(){
     
 	memcpy(bytes, ptr, size);
     
+    
+    
+	glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+	writeLog("glUnmapBuffer");
+	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+	writeLog("glBindBuffer");
+    
+	// shift names
+	GLuint temp = m_pbos[0];
+	int i;
+	for (i=1; i<NUMR_PBO; i++){
+		m_pbos[i-1] = m_pbos[i];
+	}
+	m_pbos[NUMR_PBO - 1] = temp;
+    
+#else
+    
+    bytes = (uint8_t*)malloc(size*sizeof(uint8_t));
+    glReadPixels(x,y,in_width, in_height, GL_RGB, GL_UNSIGNED_BYTE, bytes);
+    
+#endif
+    
+    
     int id  = current_image_read % NUM_THREAD;
 	int current = args_buffer[id]->arg1;
 	args_buffer[id]->arg0[current] = bytes;
@@ -1236,21 +1261,7 @@ void recordVideo(){
 	if(current_image_read >= NUM_PICTURE){
 		current_image_read = 0;
 	}
-    
-    
-    
-	glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
-	writeLog("glUnmapBuffer");
-	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-	writeLog("glBindBuffer");
-    
-	// shift names
-	GLuint temp = m_pbos[0];
-	int i;
-	for (i=1; i<NUMR_PBO; i++){
-		m_pbos[i-1] = m_pbos[i];
-	}
-	m_pbos[NUMR_PBO - 1] = temp;
+
     
     
 	writeLog("RECORD");
