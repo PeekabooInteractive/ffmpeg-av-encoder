@@ -124,10 +124,8 @@
         // Authentication failed
     } else {
         self.auth = aux_auth;
-        NSLog(@"MIERDAAAAAAAAAAAAAA1");
         //[self.controller dismissModalViewControllerAnimated:YES];
         [self.controller dismissViewControllerAnimated:YES completion:nil];
-        NSLog(@"MIERDAAAAAAAAAAAAAA");
     }
 }
 /*
@@ -189,12 +187,7 @@ extern UIViewController* UnityGetGLViewController();
 YoutubeUploaderIOS *uploader;
 
 void authGoogle(){
-    NSLog(@"Puta");
     uploader = [[YoutubeUploaderIOS alloc] init];
-    
-    //UIViewController *aux = UnityGetGLViewController();
-    
-   // [[[UIApplication sharedApplication] keyWindow] ]
     
     uploader.controller = UnityGetGLViewController();
     
