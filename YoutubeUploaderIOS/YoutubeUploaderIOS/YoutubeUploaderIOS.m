@@ -41,6 +41,11 @@
 @synthesize controller;
 @synthesize auth;
 
+@synthesize clientID;
+@synthesize clientSecret;
+@synthesize keychainItemName;
+@synthesize scope;
+
 -(void) signGoogle{
     // Note:
     // GTMOAuth2ViewControllerTouch is not designed to be reused. Make a new
@@ -49,8 +54,8 @@
     // Display the autentication view.
     SEL finishedSel = @selector(viewController:finishedWithAuth:error:);
     
-    clientID = @"231250131118-gc9mladjj0f8ck5khbjv8ud79autge1q.apps.googleusercontent.com";
-    clientSecret = @"jFh_uMRoKQ_ykjy25xiqxZ0I";
+    //clientID = @"231250131118-gc9mladjj0f8ck5khbjv8ud79autge1q.apps.googleusercontent.com";
+    //clientSecret = @"jFh_uMRoKQ_ykjy25xiqxZ0I";
     
     
     GTMOAuth2ViewControllerTouch *viewController;
@@ -180,18 +185,42 @@
 
 }
 
+-(BOOL) isGoogleLogin{
+    auth = nil;
+    auth = [GTMOAuth2ViewControllerTouch authForGoogleFromKeychainForName:keychainItemName
+                                                                 clientID:clientID
+                                                             clientSecret:clientSecret];
+    if(auth == nil){
+        return  NO;
+    }
+    
+    return auth.canAuthorize;
+}
+
 @end
 
 extern UIViewController* UnityGetGLViewController();
 
 YoutubeUploaderIOS *uploader;
 
-void authGoogle(){
+void authGoogle(const char *clientID,const char *secret,const char *keyForSaveChain,const char *scopes){
+
     uploader = [[YoutubeUploaderIOS alloc] init];
     
     uploader.controller = UnityGetGLViewController();
     
-    [uploader signGoogle];
+    uploader.clientID = [NSString stringWithUTF8String: clientID];
+    uploader.clientSecret = [NSString stringWithUTF8String: secret];
+    
+    uploader.keychainItemName = [NSString stringWithUTF8String: keyForSaveChain];
+    uploader.scope = [NSString stringWithUTF8String: scopes];
+    
+    if(![uploader isGoogleLogin]){
+        [uploader signGoogle];
+    }
+    else{
+        NSLog(@"SAVEeeee");
+    }
 
 }
 

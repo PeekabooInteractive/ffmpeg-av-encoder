@@ -13,7 +13,7 @@
 
 @interface YoutubeUploaderIOS : NSObject{
 
-    NSString *const keychainItemName;
+    NSString *keychainItemName;
     
     NSString *clientID;
     NSString *clientSecret;
@@ -25,11 +25,19 @@
     GTMOAuth2Authentication *auth;
 }
 
+@property (retain)NSString *keychainItemName;
+
+@property (retain) NSString *clientID;
+@property (retain) NSString *clientSecret;
+@property (retain) NSString *scope;
+
 @property (retain) UIViewController *controller;
 @property (retain) GTMOAuth2Authentication *auth;
 
 -(void) signGoogle;
 -(void) uploadYoutube:(NSString *)title description:(NSString *) desc tags:(NSString *)tags;
+
+-(BOOL) isGoogleLogin;
 
 @end
 void authGoogle();
