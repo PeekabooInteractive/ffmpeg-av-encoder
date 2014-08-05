@@ -7,10 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		9C34FCDD19124E9C00762F31 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9C34FCDC19124E9C00762F31 /* Foundation.framework */; };
+		6B1A0C9819893DA7007984FC /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6B1A0C9719893DA7007984FC /* CoreFoundation.framework */; };
+		6B1A0C9A19893DB1007984FC /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6B1A0C9919893DB1007984FC /* Foundation.framework */; };
+		6B1A0C9C19893DB7007984FC /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6B1A0C9B19893DB7007984FC /* AVFoundation.framework */; };
+		6B1A0C9D198941D6007984FC /* ffmpeg_video_encoder.h in Sources */ = {isa = PBXBuildFile; fileRef = 9C34FCE119124E9C00762F31 /* ffmpeg_video_encoder.h */; };
+		6B1A0C9E198941E1007984FC /* ffmpeg_video_encoder.m in Sources */ = {isa = PBXBuildFile; fileRef = 9C34FCE319124E9C00762F31 /* ffmpeg_video_encoder.m */; };
 		9C34FCEB19124E9C00762F31 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9C34FCEA19124E9C00762F31 /* XCTest.framework */; };
-		9C34FCEC19124E9C00762F31 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9C34FCDC19124E9C00762F31 /* Foundation.framework */; };
-		9C34FCEE19124E9C00762F31 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9C34FCED19124E9C00762F31 /* UIKit.framework */; };
 		9C34FCF119124E9C00762F31 /* libVideoEncoder.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 9C34FCD919124E9C00762F31 /* libVideoEncoder.a */; };
 		9C34FCF719124E9C00762F31 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 9C34FCF519124E9C00762F31 /* InfoPlist.strings */; };
 		9C34FCF919124E9C00762F31 /* ffmpeg_video_encoderTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 9C34FCF819124E9C00762F31 /* ffmpeg_video_encoderTests.m */; };
@@ -49,14 +51,15 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		6B1A0C9719893DA7007984FC /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
+		6B1A0C9919893DB1007984FC /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		6B1A0C9B19893DB7007984FC /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 		9C34FCD919124E9C00762F31 /* libVideoEncoder.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libVideoEncoder.a; sourceTree = BUILT_PRODUCTS_DIR; };
-		9C34FCDC19124E9C00762F31 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		9C34FCE019124E9C00762F31 /* ffmpeg-video-encoder-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ffmpeg-video-encoder-Prefix.pch"; sourceTree = "<group>"; };
 		9C34FCE119124E9C00762F31 /* ffmpeg_video_encoder.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ffmpeg_video_encoder.h; sourceTree = "<group>"; };
 		9C34FCE319124E9C00762F31 /* ffmpeg_video_encoder.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ffmpeg_video_encoder.m; sourceTree = "<group>"; };
 		9C34FCE919124E9C00762F31 /* ffmpeg-video-encoderTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "ffmpeg-video-encoderTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		9C34FCEA19124E9C00762F31 /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = Library/Frameworks/XCTest.framework; sourceTree = DEVELOPER_DIR; };
-		9C34FCED19124E9C00762F31 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = Library/Frameworks/UIKit.framework; sourceTree = DEVELOPER_DIR; };
 		9C34FCF419124E9C00762F31 /* ffmpeg-video-encoderTests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "ffmpeg-video-encoderTests-Info.plist"; sourceTree = "<group>"; };
 		9C34FCF619124E9C00762F31 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		9C34FCF819124E9C00762F31 /* ffmpeg_video_encoderTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ffmpeg_video_encoderTests.m; sourceTree = "<group>"; };
@@ -167,10 +170,12 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6B1A0C9C19893DB7007984FC /* AVFoundation.framework in Frameworks */,
+				6B1A0C9A19893DB1007984FC /* Foundation.framework in Frameworks */,
+				6B1A0C9819893DA7007984FC /* CoreFoundation.framework in Frameworks */,
 				9C34FD781912501200762F31 /* libswresample.a in Frameworks */,
 				9C34FD741912501200762F31 /* libavfilter.a in Frameworks */,
 				9C34FD761912501200762F31 /* libavresample.a in Frameworks */,
-				9C34FCDD19124E9C00762F31 /* Foundation.framework in Frameworks */,
 				9C34FD731912501200762F31 /* libavdevice.a in Frameworks */,
 				9C34FD771912501200762F31 /* libavutil.a in Frameworks */,
 				9C34FD791912501200762F31 /* libswscale.a in Frameworks */,
@@ -185,8 +190,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				9C34FCEB19124E9C00762F31 /* XCTest.framework in Frameworks */,
-				9C34FCEE19124E9C00762F31 /* UIKit.framework in Frameworks */,
-				9C34FCEC19124E9C00762F31 /* Foundation.framework in Frameworks */,
 				9C34FCF119124E9C00762F31 /* libVideoEncoder.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -216,10 +219,11 @@
 		9C34FCDB19124E9C00762F31 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				6B1A0C9B19893DB7007984FC /* AVFoundation.framework */,
+				6B1A0C9919893DB1007984FC /* Foundation.framework */,
+				6B1A0C9719893DA7007984FC /* CoreFoundation.framework */,
 				9C34FD601912501200762F31 /* lib */,
-				9C34FCDC19124E9C00762F31 /* Foundation.framework */,
 				9C34FCEA19124E9C00762F31 /* XCTest.framework */,
-				9C34FCED19124E9C00762F31 /* UIKit.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -538,6 +542,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6B1A0C9E198941E1007984FC /* ffmpeg_video_encoder.m in Sources */,
+				6B1A0C9D198941D6007984FC /* ffmpeg_video_encoder.h in Sources */,
 				9C34FD0319124F1D00762F31 /* VideoEncoder.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -663,7 +669,7 @@
 				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_NAME = VideoEncoder;
 				SKIP_INSTALL = YES;
-				VALID_ARCHS = "armv7 armv7s";
+				VALID_ARCHS = armv7;
 			};
 			name = Debug;
 		};
@@ -682,10 +688,11 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)/lib",
 				);
+				ONLY_ACTIVE_ARCH = YES;
 				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_NAME = VideoEncoder;
 				SKIP_INSTALL = YES;
-				VALID_ARCHS = "armv7 armv7s";
+				VALID_ARCHS = armv7;
 			};
 			name = Release;
 		};

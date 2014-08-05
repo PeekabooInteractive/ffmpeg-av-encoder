@@ -8,6 +8,9 @@
 
 #import <Foundation/Foundation.h>
 
+#include <OpenGLES/EAGL.h>
+#include <OpenGLES/EAGLDrawable.h>authGoogle
+
 @interface ffmpeg_video_encoder : NSObject
 
 @end
