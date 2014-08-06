@@ -24,7 +24,7 @@
 #define PLATFORM_ANDROID 0
 #define PLATFORM_IOS 1
 
-#define GLES3 0
+#define GLES3 1
 
 #if PLATFORM_ANDROID
 
@@ -1137,7 +1137,7 @@ void iniOpenGL(){
     
 #endif
     
-#if PLATFORM_IOS
+/*#if PLATFORM_IOS
     // generate buffers
    /* glGenFramebuffers(1, &framebuffer);
     glGenRenderbuffers(1, &renderbuffer);
@@ -1148,9 +1148,9 @@ void iniOpenGL(){
     
     // attach renderbuffer to framebuffer
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, renderbuffer);*/
-    glEnable(GL_TEXTURE_2D);
+    /*glEnable(GL_TEXTURE_2D);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-#endif
+#endif*/
     
 	// backbuffer to vram pbo index
 	current_buffer = NUMR_PBO-1;

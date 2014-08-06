@@ -35,7 +35,7 @@
 @property (retain) GTMOAuth2Authentication *auth;
 
 -(void) signGoogle;
--(void) uploadYoutube:(NSString *)title description:(NSString *) desc tags:(NSString *)tags;
+-(void) uploadYoutube:(NSString *)path title:(NSString *)title description:(NSString *) desc tags:(NSString *)tags;
 
 -(BOOL) isGoogleLogin;
 

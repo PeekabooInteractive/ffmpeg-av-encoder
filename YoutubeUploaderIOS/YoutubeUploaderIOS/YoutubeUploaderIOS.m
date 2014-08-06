@@ -11,7 +11,8 @@
 #import "GTMOAuth2SignIn.h"
 #import "GTMOAuth2ViewControllerTouch.h"
 
-
+#import "GTMHTTPUploadFetcher.h"
+#import "GTMHTTPFetcherLogging.h"
 
 #import "GTLYouTube.h"
 
@@ -160,7 +161,7 @@
 }
 */
 
--(void) uploadYoutube:(NSString *)title description:(NSString *) desc tags:(NSString *)tags{
+-(void) uploadYoutube:(NSString *)path title:(NSString *)title description:(NSString *)desc tags:(NSString *)tags{
     // Status.
     GTLYouTubeVideoStatus *status = [GTLYouTubeVideoStatus object];
     status.privacyStatus = @"public";
@@ -171,9 +172,10 @@
     if ([desc length] > 0) {
         snippet.descriptionProperty = desc;
     }
-    if ([tags length] > 0) {
+    snippet.tags = [tags componentsSeparatedByString:@","];
+    /*if ([tags length] > 0) {
         snippet.tags = [tags componentsSeparatedByString:@","];
-    }
+    }*/
     /*if ([_uploadCategoryPopup isEnabled]) {
         NSMenuItem *selectedCategory = [_uploadCategoryPopup selectedItem];
         snippet.categoryId = [selectedCategory representedObject];
@@ -182,7 +184,48 @@
     GTLYouTubeVideo *video = [GTLYouTubeVideo object];
     video.status = status;
     video.snippet = snippet;
+    
+    
+    NSFileHandle *fileHandle = [NSFileHandle fileHandleForReadingAtPath:path];
+    
+    //NSString *filename = [path lastPathComponent];
+    
+    if (fileHandle) {
+        NSLog(@"File found");
+        //NSString *mimeType = [self MIMETypeForFilename:filename defaultMIMEType:@"video/*"];
+        GTLUploadParameters *uploadParameters = [GTLUploadParameters uploadParametersWithFileHandle:fileHandle
+                                                                                           MIMEType:@"video/*"];
+        
+        GTLQueryYouTube *query = [GTLQueryYouTube queryForVideosInsertWithObject:video
+                                                                            part:@"snippet,status"
+                                                                            uploadParameters:uploadParameters];
+        
+        GTLServiceYouTube *service = [[GTLServiceYouTube alloc] init];
+        service.authorizer = self.auth;
+        
+        GTLServiceTicket *uploadFileTicket = [service executeQuery:query
+                                                completionHandler:^(GTLServiceTicket *ticket,
+                                                                    GTLYouTubeVideo *uploadedVideo,
+                                                                    NSError *error) {
+                                                    // Callback
+                                                    if (error == nil) {
+                                                        NSLog(@"NO ERROR");
+                                                    } else {
+                                                        NSLog(@"ERROR");
+                                                    }
+                                                }];
+        
+        GTMHTTPUploadFetcher *uploadFetcher = (GTMHTTPUploadFetcher *)[uploadFileTicket objectFetcher];
+        uploadFetcher.locationChangeBlock = ^(NSURL *url) {
+            //uploadLocationURL = url;
+            
+        };
 
+        
+    }
+    else{
+        NSLog(@"File not found");
+    }
 }
 
 -(BOOL) isGoogleLogin{
@@ -224,8 +267,13 @@ void authGoogle(const char *clientID,const char *secret,const char *keyForSaveCh
 
 }
 
-void uploadVideo(){
-    //[uploader uploadYoutube];
+void uploadVideo(const char *pathVideo,const char *title,const char *description,const char *tags){
+    NSString *auxPathVideo = [NSString stringWithUTF8String: pathVideo];
+    NSString *auxTitle = [NSString stringWithUTF8String: title];
+    NSString *auxDescription = [NSString stringWithUTF8String: description];
+    NSString *auxTags = [NSString stringWithUTF8String: tags];
+    
+    [uploader uploadYoutube:auxPathVideo title:auxTitle description:auxDescription tags:auxTags];
 }
 
 
