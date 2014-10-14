@@ -5,7 +5,7 @@
 	<key>IDESourceControlProjectFavoriteDictionaryKey</key>
 	<false/>
 	<key>IDESourceControlProjectIdentifier</key>
-	<string>B4129338-04E4-4845-ACCB-0A8781721411</string>
+	<string>5BECADD2-DEF5-4F37-AE5C-C0DF5C0201AC</string>
 	<key>IDESourceControlProjectName</key>
 	<string>ffmpeg-video-encoder</string>
 	<key>IDESourceControlProjectOriginsDictionary</key>
@@ -19,8 +19,6 @@
 	<dict>
 		<key>BBD17294-53CE-4FBD-A263-638C094D8603</key>
 		<string>../../..</string>
-		<key>CAD5BF75-8BCE-45B5-9305-63D875C1618A</key>
-		<string>../../../YouyubeUploadIOS/YoutubeUpload</string>
 	</dict>
 	<key>IDESourceControlProjectURL</key>
 	<string>https://github.com/PeekabooInteractive/ffmpeg-av-encoder.git</string>
@@ -36,15 +34,7 @@
 			<key>IDESourceControlWCCIdentifierKey</key>
 			<string>BBD17294-53CE-4FBD-A263-638C094D8603</string>
 			<key>IDESourceControlWCCName</key>
-			<string>ffmpeg-av-encoder</string>
-		</dict>
-		<dict>
-			<key>IDESourceControlRepositoryExtensionIdentifierKey</key>
-			<string>public.vcs.git</string>
-			<key>IDESourceControlWCCIdentifierKey</key>
-			<string>CAD5BF75-8BCE-45B5-9305-63D875C1618A</string>
-			<key>IDESourceControlWCCName</key>
-			<string>YoutubeUpload</string>
+			<string>YoutubeUploader</string>
 		</dict>
 	</array>
 </dict>

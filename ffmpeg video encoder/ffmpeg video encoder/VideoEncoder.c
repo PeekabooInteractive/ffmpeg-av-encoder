@@ -24,7 +24,7 @@
 #define PLATFORM_ANDROID 0
 #define PLATFORM_IOS 1
 
-#define GLES3 0
+#define GLES3 1
 
 #if PLATFORM_ANDROID
 
@@ -62,6 +62,8 @@
 #include <OpenGLES/ES2/gl.h>
 #include <OpenGLES/ES2/glext.h>
 
+
+
 #endif
 
 #endif
@@ -78,7 +80,6 @@
 #include <pthread.h>
 
 #define DEBUG 0
-
 
 
 #define LOG_TAG "VideoEncoder"
@@ -176,7 +177,6 @@ void writeEGLError(char* id){
 }
 
 int dirCmp(const struct dirent  **first, const struct dirent **second){
-    
 	//PATH_MAX
 	char file_1[256];
 	char file_2[256];
@@ -1116,7 +1116,8 @@ void* formatImage(void* args){
 }
 
 
-
+GLuint renderbuffer;
+GLuint framebuffer;
 void iniOpenGL(){
 #if GLES3
 	memset(m_pbos, 0, sizeof(m_pbos));
@@ -1135,6 +1136,21 @@ void iniOpenGL(){
 	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
     
 #endif
+    
+/*#if PLATFORM_IOS
+    // generate buffers
+   /* glGenFramebuffers(1, &framebuffer);
+    glGenRenderbuffers(1, &renderbuffer);
+    
+    // bind buffers
+    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+    glBindRenderbuffer(GL_RENDERBUFFER, renderbuffer);
+    
+    // attach renderbuffer to framebuffer
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, renderbuffer);*/
+    /*glEnable(GL_TEXTURE_2D);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+#endif*/
     
 	// backbuffer to vram pbo index
 	current_buffer = NUMR_PBO-1;
@@ -1239,8 +1255,11 @@ void recordVideo(){
 	m_pbos[NUMR_PBO - 1] = temp;
     
 #else
-    
     bytes = (uint8_t*)malloc(size*sizeof(uint8_t));
+    
+    /*glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+    glBindRenderbuffer(GL_RENDERBUFFER, renderbuffer);*/
+    
     glReadPixels(x,y,in_width, in_height, GL_RGB, GL_UNSIGNED_BYTE, bytes);
     
 #endif
