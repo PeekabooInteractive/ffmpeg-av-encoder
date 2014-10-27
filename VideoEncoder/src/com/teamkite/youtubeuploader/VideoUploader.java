@@ -1,4 +1,4 @@
-package com.peekaboo.videoencoder;
+package com.teamkite.youtubeuploader;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -143,11 +143,11 @@ public class VideoUploader extends UnityPlayerActivity {
                              case MEDIA_IN_PROGRESS:
                              	Log.i("VideoUploader","Upload in progress");
                              	Log.i("VideoUploader","Upload percentage: " + uploader.getProgress());
-                             	UnityPlayer.UnitySendMessage("FFMPEGWrapper", "CheckUpdload", String.valueOf(uploader.getProgress()) );
+                             	//UnityPlayer.UnitySendMessage("YoutubeUploaderEvents", "Completed", String.valueOf(uploader.getProgress()) );
                                  break;
                              case MEDIA_COMPLETE:
                              	Log.i("VideoUploader","Upload Completed!");
-                             	UnityPlayer.UnitySendMessage("FFMPEGWrapper", "CheckUpdload", String.valueOf(100) );
+                             	UnityPlayer.UnitySendMessage("YoutubeUploaderEvents", "Completed", null );
                                  break;
                              case NOT_STARTED:
                              	Log.i("VideoUploader","Upload Not Started!");
@@ -170,12 +170,15 @@ public class VideoUploader extends UnityPlayerActivity {
 
              } catch (GoogleJsonResponseException e) {
              	Log.e("VideoUploader","GoogleJsonResponseException code: " + e.getDetails().getCode() + " : " + e.getDetails().getMessage());
+             	UnityPlayer.UnitySendMessage("YoutubeUploaderEvents", "Completed", e.getDetails().getMessage() );
                  e.printStackTrace();
              } catch (IOException e) {
              	Log.e("VideoUploader","IOException: " + e.getMessage());
+             	UnityPlayer.UnitySendMessage("YoutubeUploaderEvents", "Completed", e.getMessage() );
                  e.printStackTrace();
              } catch (Throwable t) {
              	Log.e("VideoUploader","Throwable: " + t.getMessage());
+             	UnityPlayer.UnitySendMessage("YoutubeUploaderEvents", "Completed", t.getMessage() );
                  t.printStackTrace();
              }	
              
@@ -197,14 +200,14 @@ public class VideoUploader extends UnityPlayerActivity {
 
     }
     
-    public static void  UploadVideo(String path,String title, String description,String[] tag){  	
+    public static void  uploadVideo(String path,String title, String description,String[] tag){  	
     	// This OAuth 2.0 access scope allows an application to upload files
         // to the authenticated user's YouTube channel, but doesn't allow
         // other types of access.
         //List<String> scopes = Lists.newArrayList("https://www.googleapis.com/auth/youtube.upload");
         try {
         	//Log.e("VideoUploader", "youtube credentials");
-    		youtube = new YouTube.Builder(HTTP_TRANSPORT_DEFAULT, JSON_FACTORY_DEFAULT, credential).setApplicationName("Video-trial").build();
+    		youtube = new YouTube.Builder(HTTP_TRANSPORT_DEFAULT, JSON_FACTORY_DEFAULT, credential).setApplicationName("VideoUploader").build();
         	        	
         	//InputStream input = context.getAssets().open("client_secrets.json");
         	// Authorize the request.
