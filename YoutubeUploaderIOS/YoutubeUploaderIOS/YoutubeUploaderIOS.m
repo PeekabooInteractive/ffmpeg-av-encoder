@@ -161,7 +161,7 @@
 }
 */
 
--(void) uploadYoutube:(NSString *)path title:(NSString *)title description:(NSString *)desc tags:(NSString *)tags{
+-(void) uploadYoutube:(NSString *)path title:(NSString *)title description:(NSString *)desc tags:(NSString *)tags gameObjectToCallBack:(NSString *)gameObjectToCallBack{
     // Status.
     GTLYouTubeVideoStatus *status = [GTLYouTubeVideoStatus object];
     status.privacyStatus = @"public";
@@ -210,8 +210,10 @@
                                                     // Callback
                                                     if (error == nil) {
                                                         NSLog(@"NO ERROR");
+                                                        UnitySendMessage(gameObjectToCallBack, "Completed", error);
                                                     } else {
                                                         NSLog(@"ERROR");
+                                                        UnitySendMessage(gameObjectToCallBack, "Completed", error);
                                                     }
                                                 }];
         
@@ -246,7 +248,7 @@ extern UIViewController* UnityGetGLViewController();
 
 YoutubeUploaderIOS *uploader;
 
-void authGoogle(const char *clientID,const char *secret,const char *keyForSaveChain,const char *scopes){
+void authGoogle(const char *clientID,const char *secret,const char *keyForSaveChain){
 
     uploader = [[YoutubeUploaderIOS alloc] init];
     
@@ -256,24 +258,25 @@ void authGoogle(const char *clientID,const char *secret,const char *keyForSaveCh
     uploader.clientSecret = [NSString stringWithUTF8String: secret];
     
     uploader.keychainItemName = [NSString stringWithUTF8String: keyForSaveChain];
-    uploader.scope = [NSString stringWithUTF8String: scopes];
+    //uploader.scope = [NSString stringWithUTF8String: scopes];
     
     if(![uploader isGoogleLogin]){
         [uploader signGoogle];
     }
     else{
-        NSLog(@"SAVEeeee");
+        NSLog(@"Saved");
     }
 
 }
 
-void uploadVideo(const char *pathVideo,const char *title,const char *description,const char *tags){
+void uploadVideo(const char *pathVideo,const char *title,const char *description,const char *tags,const char *gameObjectToCallBack){
     NSString *auxPathVideo = [NSString stringWithUTF8String: pathVideo];
     NSString *auxTitle = [NSString stringWithUTF8String: title];
     NSString *auxDescription = [NSString stringWithUTF8String: description];
     NSString *auxTags = [NSString stringWithUTF8String: tags];
+    NSString *auxGameObjectToCallBack = [NSString stringWithUTF8String: gameObjectToCallBack];
     
-    [uploader uploadYoutube:auxPathVideo title:auxTitle description:auxDescription tags:auxTags];
+    [uploader uploadYoutube:auxPathVideo title:auxTitle description:auxDescription tags:auxTags gameObjectToCallBack:auxGameObjectToCallBack];
 }
 
 
