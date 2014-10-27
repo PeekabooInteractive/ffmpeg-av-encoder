@@ -684,7 +684,7 @@ int createVideoFromDirectory(char* path,char* out_file,int in_width,int in_heigh
 	struct dirent *pDirent;
 	struct  dirent  **pDirs;
     
-	AVCodec *audio_codec, *video_codec;
+	AVCodec *audio_codec = NULL, *video_codec = NULL;
     
 	av_register_all();
     
@@ -750,6 +750,7 @@ int createVideoFromDirectory(char* path,char* out_file,int in_width,int in_heigh
 	int dirNum = scandir(path,&pDirs,dirSelect,dirCmp);
 	if(dirNum <= 0){
 		writeLog( "could not open %s\r\n", path);
+        free(aux_path);
 		//write_log( "could not open");
 		return -1;
 	}
@@ -1348,6 +1349,8 @@ void recordSample(float* dataSource,int size){
 			lapSamples=1;
 		}
 	}
+    
+    free(data);
     
 }
 
