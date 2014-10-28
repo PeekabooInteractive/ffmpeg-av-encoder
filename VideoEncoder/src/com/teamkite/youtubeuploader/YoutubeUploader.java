@@ -84,32 +84,39 @@ public class YoutubeUploader extends UnityPlayerActivity {
     protected void onActivityResult(final int requestCode, final int resultCode, final Intent data) {
     	if (requestCode == 1 && resultCode == RESULT_OK) {
             String accountName = data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
-            getTokens(accountName);
+            
+            
+            
+            AsyncTask<String, Void, Void> task = new AsyncTask<String, Void, Void>() {
+                @Override
+                protected Void doInBackground(String... params) {
+                   // String token = null;
+
+                    getTokens(params[0]);
+					return null;
+                    
+
+                    //return token;
+                }
+
+                @Override
+                protected void onPostExecute(Void token) {
+                    Log.i("YoutubeUploader", "Access token retrieved:" + token);
+                }
+
+            };
+            task.execute(accountName);
+            
     	}
 
     }
     public static void getTokens(String accountName){
-    	//Account account;
+
         try {
-        	
-        	//account = AccountManager.get(activity).getAccountsByType(GoogleAuthUtil.GOOGLE_ACCOUNT_TYPE)[0];    
-        	
-        	//Log.i("YoutubeUploader","Tokens 3");
-        	//String tokens = GoogleAuthUtil.getToken(activity, accountName, SCOPES.toString());
         	    
         	credential = GoogleAccountCredential.usingOAuth2(activity,Arrays.asList(SCOPES));// Collections.singleton(YouTubeScopes.YOUTUBE_UPLOAD));
         	
-        	//Log.i("YoutubeUploader","Tokens 4");
-        	
-        	//SharedPreferences settings = context.getSharedPreferences("", Context.MODE_PRIVATE);
-        	 //SharedPreferences settings = context.getSharedPreferences(Context.MODE_PRIVATE,0);
-        	
-        	//SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);
-    		//String mChosenAccountName = sp.getString("accountName", null);
-        	
         	credential.setSelectedAccountName(accountName);
-        	
-        	//String token = GoogleAuthUtil.getToken(activity, account, OAUTH_SCOPE);
         	
         	String tokens = credential.getToken();   
         	Log.i("YoutubeUploader","Tokens :"+tokens+ " callback "+thisGameObjectCallBack);
@@ -140,67 +147,12 @@ public class YoutubeUploader extends UnityPlayerActivity {
     }
     
     public static void authGoogle(String gameObjectCallBack){
-    	// This OAuth 2.0 access scope allows an application to upload files
-        // to the authenticated user's YouTube channel, but doesn't allow
-        // other types of access.
-        //List<String> scopes = Lists.newArrayList("https://www.googleapis.com/auth/youtube.upload");
-    	//Account account;
-       // try {
-    	//Log.i("YoutubeUploader","Tokens 1");
     	thisGameObjectCallBack = gameObjectCallBack;
     	
-    	//Log.i("YoutubeUploader","Tokens 2");
     	Intent intent = AccountPicker.newChooseAccountIntent(null, null, new String[]{GoogleAuthUtil.GOOGLE_ACCOUNT_TYPE}, true, "", null, null, null);
     	
     	activity.startActivityForResult(intent, 1);
     	
-    	//AccountManager.get(activity).invalidateAuthToken(credential.get, authToken)
-    	
-    	//account = AccountManager.get(activity).getAccountsByType(GoogleAuthUtil.GOOGLE_ACCOUNT_TYPE)[0];    
-        	
-        	//Log.i("YoutubeUploader","Tokens 3");
-        	
-        	    
-        	/*credential = GoogleAccountCredential.usingOAuth2(activity,Arrays.asList(SCOPES));// Collections.singleton(YouTubeScopes.YOUTUBE_UPLOAD));
-        	
-        	//Log.i("YoutubeUploader","Tokens 4");
-        	
-        	//SharedPreferences settings = context.getSharedPreferences("", Context.MODE_PRIVATE);
-        	 //SharedPreferences settings = context.getSharedPreferences(Context.MODE_PRIVATE,0);
-        	
-        	//SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);
-    		//String mChosenAccountName = sp.getString("accountName", null);
-        	
-        	credential.setSelectedAccountName(account.name);
-        	
-        	//String token = GoogleAuthUtil.getToken(activity, account, OAUTH_SCOPE);
-        	
-        	String tokens = credential.getToken();   
-        	Log.i("YoutubeUploader","Tokens :"+tokens+ " callback "+thisGameObjectCallBack);
-        	if(tokens != null){
-        		UnityPlayer.UnitySendMessage(thisGameObjectCallBack, "OnAuth", "" );
-        	}
-        	else{
-        		UnityPlayer.UnitySendMessage(thisGameObjectCallBack, "OnFailed", "Can't auth" );
-        	}
-        	
-
-        }catch (GooglePlayServicesAvailabilityException playEx) {
-        	Log.e("YoutubeUploader","GooglePlayServicesAvailabilityException authentication exception: " + playEx.getMessage());
-        	UnityPlayer.UnitySendMessage(thisGameObjectCallBack, "OnFailed", playEx.getMessage() );
-        }catch (UserRecoverableAuthException recoverableException) {
-        	activity.startActivityForResult(recoverableException.getIntent(), 0);  
-        	UnityPlayer.UnitySendMessage(thisGameObjectCallBack, "OnFailed",recoverableException.getMessage() );
-        	Log.i("YoutubeUploader","UserRecoverableAuthException authentication exception: " + recoverableException.getMessage());
-        } catch (GoogleAuthException authEx) {
-            // This is likely unrecoverable.
-        	UnityPlayer.UnitySendMessage(thisGameObjectCallBack, "OnFailed", authEx.getMessage() );
-        	Log.e("YoutubeUploader","Unrecoverable authentication exception: " + authEx.getMessage());      
-        } catch (IOException e) {
-        	Log.e("YoutubeUploader","IOException: " + e.getMessage());
-        	UnityPlayer.UnitySendMessage(thisGameObjectCallBack, "OnFailed", e.getMessage() );
-        	e.printStackTrace();
-        }*/
     }
     
     private static class BackgroundUpload extends AsyncTask<YouTube.Videos.Insert, Void, Void>{
@@ -239,7 +191,7 @@ public class YoutubeUploader extends UnityPlayerActivity {
                                  break;
                              case MEDIA_COMPLETE:
                              	Log.i("YoutubeUploader","Upload Completed!");
-                             	UnityPlayer.UnitySendMessage(thisGameObjectCallBack, "Completed", "" );
+                             	UnityPlayer.UnitySendMessage(thisGameObjectCallBack, "OnCompleted", "" );
                                  break;
                              case NOT_STARTED:
                              	Log.i("YoutubeUploader","Upload Not Started!");
