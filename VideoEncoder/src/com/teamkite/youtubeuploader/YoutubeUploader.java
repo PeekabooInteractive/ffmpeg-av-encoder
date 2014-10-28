@@ -8,6 +8,7 @@ import java.util.List;
 
 import android.accounts.Account;
 import android.accounts.AccountManager;
+import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
@@ -16,6 +17,7 @@ import com.google.android.gms.auth.GoogleAuthException;
 import com.google.android.gms.auth.GoogleAuthUtil;
 import com.google.android.gms.auth.GooglePlayServicesAvailabilityException;
 import com.google.android.gms.auth.UserRecoverableAuthException;
+import com.google.android.gms.common.AccountPicker;
 import com.google.android.gms.common.Scopes;
 import com.google.api.client.extensions.android.http.AndroidHttp;
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
@@ -37,7 +39,7 @@ import com.unity3d.player.UnityPlayerActivity;
 
 
 
-public class VideoUploader extends UnityPlayerActivity {
+public class YoutubeUploader extends UnityPlayerActivity {
 	
 	 /**
      * Define a global instance of a Youtube object, which will be used
@@ -53,7 +55,7 @@ public class VideoUploader extends UnityPlayerActivity {
 
     private static final String SAMPLE_VIDEO_FILENAME = "try.mkv";
     
-    public static VideoUploader activity;
+    public static YoutubeUploader activity;
     
     private static GoogleAccountCredential credential;
     
@@ -62,6 +64,8 @@ public class VideoUploader extends UnityPlayerActivity {
     public static final HttpTransport HTTP_TRANSPORT_DEFAULT = AndroidHttp.newCompatibleTransport();
     
     public static final JsonFactory JSON_FACTORY_DEFAULT = GsonFactory.getDefaultInstance();   
+    
+    private static String thisGameObjectCallBack;
     
 
     protected void onCreate(Bundle savedInstanceState) {
@@ -77,16 +81,89 @@ public class VideoUploader extends UnityPlayerActivity {
 	    // super.onBackPressed();
     }
   
-    public static void authGoogle(){
+    protected void onActivityResult(final int requestCode, final int resultCode, final Intent data) {
+    	if (requestCode == 1 && resultCode == RESULT_OK) {
+            String accountName = data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
+            getTokens(accountName);
+    	}
+
+    }
+    public static void getTokens(String accountName){
+    	//Account account;
+        try {
+        	
+        	//account = AccountManager.get(activity).getAccountsByType(GoogleAuthUtil.GOOGLE_ACCOUNT_TYPE)[0];    
+        	
+        	//Log.i("YoutubeUploader","Tokens 3");
+        	//String tokens = GoogleAuthUtil.getToken(activity, accountName, SCOPES.toString());
+        	    
+        	credential = GoogleAccountCredential.usingOAuth2(activity,Arrays.asList(SCOPES));// Collections.singleton(YouTubeScopes.YOUTUBE_UPLOAD));
+        	
+        	//Log.i("YoutubeUploader","Tokens 4");
+        	
+        	//SharedPreferences settings = context.getSharedPreferences("", Context.MODE_PRIVATE);
+        	 //SharedPreferences settings = context.getSharedPreferences(Context.MODE_PRIVATE,0);
+        	
+        	//SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);
+    		//String mChosenAccountName = sp.getString("accountName", null);
+        	
+        	credential.setSelectedAccountName(accountName);
+        	
+        	//String token = GoogleAuthUtil.getToken(activity, account, OAUTH_SCOPE);
+        	
+        	String tokens = credential.getToken();   
+        	Log.i("YoutubeUploader","Tokens :"+tokens+ " callback "+thisGameObjectCallBack);
+        	if(tokens != null){
+        		UnityPlayer.UnitySendMessage(thisGameObjectCallBack, "OnAuth", "" );
+        	}
+        	else{
+        		UnityPlayer.UnitySendMessage(thisGameObjectCallBack, "OnFailed", "Can't auth" );
+        	}
+        	
+
+        }catch (GooglePlayServicesAvailabilityException playEx) {
+        	Log.e("YoutubeUploader","GooglePlayServicesAvailabilityException authentication exception: " + playEx.getMessage());
+        	UnityPlayer.UnitySendMessage(thisGameObjectCallBack, "OnFailed", playEx.getMessage() );
+        }catch (UserRecoverableAuthException recoverableException) {
+        	activity.startActivityForResult(recoverableException.getIntent(), 0);  
+        	UnityPlayer.UnitySendMessage(thisGameObjectCallBack, "OnFailed",recoverableException.getMessage() );
+        	Log.i("YoutubeUploader","UserRecoverableAuthException authentication exception: " + recoverableException.getMessage());
+        } catch (GoogleAuthException authEx) {
+            // This is likely unrecoverable.
+        	UnityPlayer.UnitySendMessage(thisGameObjectCallBack, "OnFailed", authEx.getMessage() );
+        	Log.e("YoutubeUploader","Unrecoverable authentication exception: " + authEx.getMessage());      
+        } catch (IOException e) {
+        	Log.e("YoutubeUploader","IOException: " + e.getMessage());
+        	UnityPlayer.UnitySendMessage(thisGameObjectCallBack, "OnFailed", e.getMessage() );
+        	e.printStackTrace();
+        }
+    }
+    
+    public static void authGoogle(String gameObjectCallBack){
     	// This OAuth 2.0 access scope allows an application to upload files
         // to the authenticated user's YouTube channel, but doesn't allow
         // other types of access.
         //List<String> scopes = Lists.newArrayList("https://www.googleapis.com/auth/youtube.upload");
-    	Account account;
-        try {
-        	account = AccountManager.get(activity).getAccountsByType(GoogleAuthUtil.GOOGLE_ACCOUNT_TYPE)[0];    
+    	//Account account;
+       // try {
+    	//Log.i("YoutubeUploader","Tokens 1");
+    	thisGameObjectCallBack = gameObjectCallBack;
+    	
+    	//Log.i("YoutubeUploader","Tokens 2");
+    	Intent intent = AccountPicker.newChooseAccountIntent(null, null, new String[]{GoogleAuthUtil.GOOGLE_ACCOUNT_TYPE}, true, "", null, null, null);
+    	
+    	activity.startActivityForResult(intent, 1);
+    	
+    	//AccountManager.get(activity).invalidateAuthToken(credential.get, authToken)
+    	
+    	//account = AccountManager.get(activity).getAccountsByType(GoogleAuthUtil.GOOGLE_ACCOUNT_TYPE)[0];    
+        	
+        	//Log.i("YoutubeUploader","Tokens 3");
+        	
         	    
-        	credential = GoogleAccountCredential. usingOAuth2(activity,Arrays.asList(SCOPES));// Collections.singleton(YouTubeScopes.YOUTUBE_UPLOAD));
+        	/*credential = GoogleAccountCredential.usingOAuth2(activity,Arrays.asList(SCOPES));// Collections.singleton(YouTubeScopes.YOUTUBE_UPLOAD));
+        	
+        	//Log.i("YoutubeUploader","Tokens 4");
         	
         	//SharedPreferences settings = context.getSharedPreferences("", Context.MODE_PRIVATE);
         	 //SharedPreferences settings = context.getSharedPreferences(Context.MODE_PRIVATE,0);
@@ -96,20 +173,34 @@ public class VideoUploader extends UnityPlayerActivity {
         	
         	credential.setSelectedAccountName(account.name);
         	
-        	credential.getToken();        	
+        	//String token = GoogleAuthUtil.getToken(activity, account, OAUTH_SCOPE);
+        	
+        	String tokens = credential.getToken();   
+        	Log.i("YoutubeUploader","Tokens :"+tokens+ " callback "+thisGameObjectCallBack);
+        	if(tokens != null){
+        		UnityPlayer.UnitySendMessage(thisGameObjectCallBack, "OnAuth", "" );
+        	}
+        	else{
+        		UnityPlayer.UnitySendMessage(thisGameObjectCallBack, "OnFailed", "Can't auth" );
+        	}
+        	
 
         }catch (GooglePlayServicesAvailabilityException playEx) {
-        	Log.e("VideoUploader","GooglePlayServicesAvailabilityException authentication exception: " + playEx.getMessage());
+        	Log.e("YoutubeUploader","GooglePlayServicesAvailabilityException authentication exception: " + playEx.getMessage());
+        	UnityPlayer.UnitySendMessage(thisGameObjectCallBack, "OnFailed", playEx.getMessage() );
         }catch (UserRecoverableAuthException recoverableException) {
-        	activity.startActivityForResult(recoverableException.getIntent(), 0);        	
-        	Log.i("VideoUploader","UserRecoverableAuthException authentication exception: " + recoverableException.getMessage());
+        	activity.startActivityForResult(recoverableException.getIntent(), 0);  
+        	UnityPlayer.UnitySendMessage(thisGameObjectCallBack, "OnFailed",recoverableException.getMessage() );
+        	Log.i("YoutubeUploader","UserRecoverableAuthException authentication exception: " + recoverableException.getMessage());
         } catch (GoogleAuthException authEx) {
             // This is likely unrecoverable.
-        	Log.e("VideoUploader","Unrecoverable authentication exception: " + authEx.getMessage());      
+        	UnityPlayer.UnitySendMessage(thisGameObjectCallBack, "OnFailed", authEx.getMessage() );
+        	Log.e("YoutubeUploader","Unrecoverable authentication exception: " + authEx.getMessage());      
         } catch (IOException e) {
-        	Log.e("VideoUploader","IOException: " + e.getMessage());
+        	Log.e("YoutubeUploader","IOException: " + e.getMessage());
+        	UnityPlayer.UnitySendMessage(thisGameObjectCallBack, "OnFailed", e.getMessage() );
         	e.printStackTrace();
-        }
+        }*/
     }
     
     private static class BackgroundUpload extends AsyncTask<YouTube.Videos.Insert, Void, Void>{
@@ -117,6 +208,7 @@ public class VideoUploader extends UnityPlayerActivity {
          protected Void doInBackground(YouTube.Videos.Insert... params) {
              try{          	
             	 YouTube.Videos.Insert videoInsert = params[0];
+            	
             	 
             	 // Set the upload type and add an event listener.
                  MediaHttpUploader uploader = videoInsert.getMediaHttpUploader();
@@ -135,22 +227,22 @@ public class VideoUploader extends UnityPlayerActivity {
                      public void progressChanged(MediaHttpUploader uploader) throws IOException {
                          switch (uploader.getUploadState()) {
                              case INITIATION_STARTED:
-                             	Log.i("VideoUploader","Initiation Started");
+                             	Log.i("YoutubeUploader","Initiation Started");
                                  break;
                              case INITIATION_COMPLETE:
-                             	Log.i("VideoUploader","Initiation Completed");
+                             	Log.i("YoutubeUploader","Initiation Completed");
                                  break;
                              case MEDIA_IN_PROGRESS:
-                             	Log.i("VideoUploader","Upload in progress");
-                             	Log.i("VideoUploader","Upload percentage: " + uploader.getProgress());
+                             	Log.i("YoutubeUploader","Upload in progress");
+                             	Log.i("YoutubeUploader","Upload percentage: " + uploader.getProgress());
                              	//UnityPlayer.UnitySendMessage("YoutubeUploaderEvents", "Completed", String.valueOf(uploader.getProgress()) );
                                  break;
                              case MEDIA_COMPLETE:
-                             	Log.i("VideoUploader","Upload Completed!");
-                             	UnityPlayer.UnitySendMessage("YoutubeUploaderEvents", "Completed", null );
+                             	Log.i("YoutubeUploader","Upload Completed!");
+                             	UnityPlayer.UnitySendMessage(thisGameObjectCallBack, "Completed", "" );
                                  break;
                              case NOT_STARTED:
-                             	Log.i("VideoUploader","Upload Not Started!");
+                             	Log.i("YoutubeUploader","Upload Not Started!");
                                  break;
                          }
                      }
@@ -161,24 +253,24 @@ public class VideoUploader extends UnityPlayerActivity {
                  Video returnedVideo = videoInsert.execute();
 
                  // Print data about the newly inserted video from the API response.
-                 Log.i("VideoUploader","\n================== Returned Video ==================\n");
-                 Log.i("VideoUploader","  - Id: " + returnedVideo.getId());
-                 Log.i("VideoUploader","  - Title: " + returnedVideo.getSnippet().getTitle());
-                 Log.i("VideoUploader","  - Tags: " + returnedVideo.getSnippet().getTags());
-                 Log.i("VideoUploader","  - Privacy Status: " + returnedVideo.getStatus().getPrivacyStatus());
-                 Log.i("VideoUploader","  - Video Count: " + returnedVideo.getStatistics().getViewCount());
+                 Log.i("YoutubeUploader","\n================== Returned Video ==================\n");
+                 Log.i("YoutubeUploader","  - Id: " + returnedVideo.getId());
+                 Log.i("YoutubeUploader","  - Title: " + returnedVideo.getSnippet().getTitle());
+                 Log.i("YoutubeUploader","  - Tags: " + returnedVideo.getSnippet().getTags());
+                 Log.i("YoutubeUploader","  - Privacy Status: " + returnedVideo.getStatus().getPrivacyStatus());
+                 Log.i("YoutubeUploader","  - Video Count: " + returnedVideo.getStatistics().getViewCount());
 
              } catch (GoogleJsonResponseException e) {
-             	Log.e("VideoUploader","GoogleJsonResponseException code: " + e.getDetails().getCode() + " : " + e.getDetails().getMessage());
-             	UnityPlayer.UnitySendMessage("YoutubeUploaderEvents", "Completed", e.getDetails().getMessage() );
+             	Log.e("YoutubeUploader","GoogleJsonResponseException code: " + e.getDetails().getCode() + " : " + e.getDetails().getMessage());
+             	UnityPlayer.UnitySendMessage(thisGameObjectCallBack, "OnFailed", e.getDetails().getMessage() );
                  e.printStackTrace();
              } catch (IOException e) {
-             	Log.e("VideoUploader","IOException: " + e.getMessage());
-             	UnityPlayer.UnitySendMessage("YoutubeUploaderEvents", "Completed", e.getMessage() );
+             	Log.e("YoutubeUploader","IOException: " + e.getMessage());
+             	UnityPlayer.UnitySendMessage(thisGameObjectCallBack, "OnFailed", e.getMessage() );
                  e.printStackTrace();
              } catch (Throwable t) {
-             	Log.e("VideoUploader","Throwable: " + t.getMessage());
-             	UnityPlayer.UnitySendMessage("YoutubeUploaderEvents", "Completed", t.getMessage() );
+             	Log.e("YoutubeUploader","Throwable: " + t.getMessage());
+             	UnityPlayer.UnitySendMessage(thisGameObjectCallBack, "OnFailed", t.getMessage() );
                  t.printStackTrace();
              }	
              
@@ -206,6 +298,7 @@ public class VideoUploader extends UnityPlayerActivity {
         // other types of access.
         //List<String> scopes = Lists.newArrayList("https://www.googleapis.com/auth/youtube.upload");
         try {
+        	
         	//Log.e("VideoUploader", "youtube credentials");
     		youtube = new YouTube.Builder(HTTP_TRANSPORT_DEFAULT, JSON_FACTORY_DEFAULT, credential).setApplicationName("VideoUploader").build();
         	        	
@@ -217,7 +310,7 @@ public class VideoUploader extends UnityPlayerActivity {
             // This object is used to make YouTube Data API requests.
             //youtube = new YouTube.Builder(Auth.HTTP_TRANSPORT, Auth.JSON_FACTORY, credential).setApplicationName("VideoUploader").build();
 
-            Log.e("VideoUploader","Uploading: " + SAMPLE_VIDEO_FILENAME);
+            Log.i("YoutubeUploader","Uploading: " + SAMPLE_VIDEO_FILENAME);
 
             // Add extra information to the video before uploading.
             Video videoObjectDefiningMetadata = new Video();
@@ -265,13 +358,16 @@ public class VideoUploader extends UnityPlayerActivity {
 
 
         } catch (GoogleJsonResponseException e) {
-        	Log.e("VideoUploader","GoogleJsonResponseException code: " + e.getDetails().getCode() + " : " + e.getDetails().getMessage());
+        	Log.e("YoutubeUploader","GoogleJsonResponseException code: " + e.getDetails().getCode() + " : " + e.getDetails().getMessage());
+        	UnityPlayer.UnitySendMessage(thisGameObjectCallBack, "OnFailed", e.getDetails().getMessage() );
             e.printStackTrace();
         } catch (IOException e) {
-        	Log.e("VideoUploader","IOException: " + e.getMessage());
+        	Log.e("YoutubeUploader","IOException: " + e.getMessage());
+        	UnityPlayer.UnitySendMessage(thisGameObjectCallBack, "OnFailed", e.getMessage() );
             e.printStackTrace();
         } catch (Throwable t) {
-        	Log.e("VideoUploader","Throwable: " + t.getMessage());
+        	Log.e("YoutubeUploader","Throwable: " + t.getMessage());
+        	UnityPlayer.UnitySendMessage(thisGameObjectCallBack, "OnFailed", t.getMessage() );
             t.printStackTrace();
         }	
     	
