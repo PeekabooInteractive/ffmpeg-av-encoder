@@ -34,8 +34,6 @@ import com.google.api.services.youtube.model.VideoSnippet;
 import com.google.api.services.youtube.model.VideoStatus;
 import com.unity3d.player.UnityPlayer;
 import com.unity3d.player.UnityPlayerActivity;
-//import com.google.api.services.samples.youtube.cmdline.Auth;
-
 
 
 public class YoutubeUploader extends UnityPlayerActivity {
@@ -153,17 +151,10 @@ public class YoutubeUploader extends UnityPlayerActivity {
             	 YouTube.Videos.Insert videoInsert = params[0];
             	
             	 
-            	 // Set the upload type and add an event listener.
+            	 // Set the event listener.
                  MediaHttpUploader uploader = videoInsert.getMediaHttpUploader();
 
-                 // Indicate whether direct media upload is enabled. A value of
-                 // "True" indicates that direct media upload is enabled and that
-                 // the entire media content will be uploaded in a single request.
-                 // A value of "False," which is the default, indicates that the
-                 // request will use the resumable media upload protocol, which
-                 // supports the ability to resume an upload operation after a
-                 // network interruption or other transmission failure, saving
-                 // time and bandwidth in the event of network failures.
+              
                  uploader.setDirectUploadEnabled(false);
 
                  MediaHttpUploaderProgressListener progressListener = new MediaHttpUploaderProgressListener() {
@@ -178,7 +169,6 @@ public class YoutubeUploader extends UnityPlayerActivity {
                              case MEDIA_IN_PROGRESS:
                              	Log.i(TAG,"Upload in progress");
                              	Log.i(TAG,"Upload percentage: " + uploader.getProgress());
-                             	//UnityPlayer.UnitySendMessage("YoutubeUploaderEvents", "Completed", String.valueOf(uploader.getProgress()) );
                                  break;
                              case MEDIA_COMPLETE:
                              	Log.i(TAG,"Upload Completed!");
@@ -192,11 +182,8 @@ public class YoutubeUploader extends UnityPlayerActivity {
                  };
                  uploader.setProgressListener(progressListener);   	 
             	 
-                 // Call the API and upload the video.
                  Video returnedVideo = videoInsert.execute();
 
-                 // Print data about the newly inserted video from the API response.
-                 Log.i(TAG,"\n================== Video Data ==================\n");
                  Log.i(TAG,"  - Id: " + returnedVideo.getId());
                  Log.i(TAG,"  - Title: " + returnedVideo.getSnippet().getTitle());
                  Log.i(TAG,"  - Tags: " + returnedVideo.getSnippet().getTags());
@@ -236,49 +223,32 @@ public class YoutubeUploader extends UnityPlayerActivity {
     }
     
     public static void  uploadVideo(String path,String title, String description,String[] tag){  	
-    	// This OAuth 2.0 access scope allows an application to upload files
-        // to the authenticated user's YouTube channel, but doesn't allow
-        // other types of access.
-        //List<String> scopes = Lists.newArrayList("https://www.googleapis.com/auth/youtube.upload");
         try {
         	
     		youtube = new YouTube.Builder(HTTP_TRANSPORT_DEFAULT, JSON_FACTORY_DEFAULT, credential).setApplicationName("VideoUploader").build();
         	        	
             Log.i(TAG,"Uploading: " + path);
 
-            // Add extra information to the video before uploading.
             Video videoObjectDefiningMetadata = new Video();
 
-            // Set the video to be publicly visible. This is the default
-            // setting. Other supporting settings are "unlisted" and "private."
             
             VideoStatus status = new VideoStatus();
             status.setPrivacyStatus("public");
             videoObjectDefiningMetadata.setStatus(status);
            
-
-            // Most of the video's metadata is set on the VideoSnippet object.
             VideoSnippet snippet = new VideoSnippet();
 
             snippet.setTitle(title);
             snippet.setDescription(description);
 
-            // Set the keyword tags that you want to associate with the video.
             List<String> tags = new ArrayList<String>(Arrays.asList(tag));
          
             snippet.setTags(tags); 
 
-            // Add the completed snippet object to the video resource.
             videoObjectDefiningMetadata.setSnippet(snippet);
 
-            //InputStreamContent mediaContent = new InputStreamContent(VIDEO_FILE_FORMAT,context.getAssets().open(SAMPLE_VIDEO_FILENAME));
             InputStreamContent mediaContent = new InputStreamContent(VIDEO_FILE_FORMAT,new FileInputStream(path));
 
-            // Insert the video. The command sends three arguments. The first
-            // specifies which information the API request is setting and which
-            // information the API response should return. The second argument
-            // is the video resource that contains metadata about the new video.
-            // The third argument is the actual video content.
             YouTube.Videos.Insert videoInsert = youtube.videos().insert("snippet,statistics,status", videoObjectDefiningMetadata, mediaContent);
             
           
