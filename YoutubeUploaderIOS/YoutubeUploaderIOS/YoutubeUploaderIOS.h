@@ -12,12 +12,15 @@
 @class GTMOAuth2Authentication;
 
 @interface YoutubeUploaderIOS : NSObject{
+    
 
     NSString *keychainItemName;
     
     NSString *clientID;
     NSString *clientSecret;
     NSString *scope;
+    
+    NSString *gameObjectToCallBack;
     
     
     UIViewController *controller;
@@ -31,6 +34,8 @@
 @property (retain) NSString *clientSecret;
 @property (retain) NSString *scope;
 
+@property (retain) NSString *gameObjectToCallBack;
+
 @property (retain) UIViewController *controller;
 @property (retain) GTMOAuth2Authentication *auth;
 
@@ -40,7 +45,7 @@
 -(BOOL) isGoogleLogin;
 
 @end
-void authGoogle();
+//void authGoogle();
 //static NSString *const keychainItemName= @"OAuth2 Sample: Youtube";
 
 //NSString *kMyClientID = @"231250131118-gc9mladjj0f8ck5khbjv8ud79autge1q.apps.googleusercontent.com"; //re-assigned by service

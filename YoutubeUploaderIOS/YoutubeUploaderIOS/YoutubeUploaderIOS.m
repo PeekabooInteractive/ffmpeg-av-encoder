@@ -47,6 +47,14 @@
 @synthesize keychainItemName;
 @synthesize scope;
 
+@synthesize gameObjectToCallBack;
+
+NSString *const OnCompleted = @"OnCompleted";
+
+NSString *const OnAuth = @"OnAuth";
+NSString *const OnFailed = @"OnFailed";
+NSString *const OnCancelled = @"OnCancelled";
+
 -(void) signGoogle{
     // Note:
     // GTMOAuth2ViewControllerTouch is not designed to be reused. Make a new
@@ -127,11 +135,13 @@
       finishedWithAuth:(GTMOAuth2Authentication *)aux_auth
                  error:(NSError *)error {
     if (error != nil) {
+        UnitySendMessage(gameObjectToCallBack, OnFailed, "Authentication failed");
         // Authentication failed
     } else {
         self.auth = aux_auth;
         //[self.controller dismissModalViewControllerAnimated:YES];
         [self.controller dismissViewControllerAnimated:YES completion:nil];
+        UnitySendMessage(gameObjectToCallBack, OnAuth, "");
     }
 }
 /*
@@ -161,8 +171,8 @@
 }
 */
 
--(void) uploadYoutube:(NSString *)path title:(NSString *)title description:(NSString *)desc tags:(NSString *)tags gameObjectToCallBack:(NSString *)gameObjectToCallBack{
-    // Status.
+-(void) uploadYoutube:(NSString *)path title:(NSString *)title description:(NSString *)desc tags:(NSString *)tags{
+    // Statu
     GTLYouTubeVideoStatus *status = [GTLYouTubeVideoStatus object];
     status.privacyStatus = @"public";
     
@@ -210,10 +220,10 @@
                                                     // Callback
                                                     if (error == nil) {
                                                         NSLog(@"NO ERROR");
-                                                        UnitySendMessage(gameObjectToCallBack, "Completed", error);
+                                                        UnitySendMessage(gameObjectToCallBack, OnCompleted, "");
                                                     } else {
                                                         NSLog(@"ERROR");
-                                                        UnitySendMessage(gameObjectToCallBack, "Completed", error);
+                                                        UnitySendMessage(gameObjectToCallBack, OnFailed, error);
                                                     }
                                                 }];
         
@@ -248,8 +258,8 @@ extern UIViewController* UnityGetGLViewController();
 
 YoutubeUploaderIOS *uploader;
 
-void authGoogle(const char *clientID,const char *secret,const char *keyForSaveChain){
-
+void authGoogle(const char *clientID,const char *secret,const char *keyForSaveChain,const char *gameObjectToCallBack){
+    
     uploader = [[YoutubeUploaderIOS alloc] init];
     
     uploader.controller = UnityGetGLViewController();
@@ -258,7 +268,9 @@ void authGoogle(const char *clientID,const char *secret,const char *keyForSaveCh
     uploader.clientSecret = [NSString stringWithUTF8String: secret];
     
     uploader.keychainItemName = [NSString stringWithUTF8String: keyForSaveChain];
-    //uploader.scope = [NSString stringWithUTF8String: scopes];
+    
+    uploader.gameObjectToCallBack = [NSString stringWithUTF8String: gameObjectToCallBack];
+
     
     if(![uploader isGoogleLogin]){
         [uploader signGoogle];
@@ -269,14 +281,14 @@ void authGoogle(const char *clientID,const char *secret,const char *keyForSaveCh
 
 }
 
-void uploadVideo(const char *pathVideo,const char *title,const char *description,const char *tags,const char *gameObjectToCallBack){
+void uploadVideo(const char *pathVideo,const char *title,const char *description,const char *tags){
     NSString *auxPathVideo = [NSString stringWithUTF8String: pathVideo];
     NSString *auxTitle = [NSString stringWithUTF8String: title];
     NSString *auxDescription = [NSString stringWithUTF8String: description];
     NSString *auxTags = [NSString stringWithUTF8String: tags];
-    NSString *auxGameObjectToCallBack = [NSString stringWithUTF8String: gameObjectToCallBack];
     
-    [uploader uploadYoutube:auxPathVideo title:auxTitle description:auxDescription tags:auxTags gameObjectToCallBack:auxGameObjectToCallBack];
+    
+    [uploader uploadYoutube:auxPathVideo title:auxTitle description:auxDescription tags:auxTags];
 }
 
 
