@@ -16,8 +16,6 @@
 
 #import "GTLYouTube.h"
 
-
-
 /*@interface YoutubeUploaderIOS()
 -(void) signGoogle;
 - (void)viewController:(GTMOAuth2ViewControllerTouch *)viewController
@@ -135,14 +133,15 @@ NSString *const OnCancelled = @"OnCancelled";
       finishedWithAuth:(GTMOAuth2Authentication *)aux_auth
                  error:(NSError *)error {
     if (error != nil) {
-        UnitySendMessage(gameObjectToCallBack, OnFailed, "Authentication failed");
+        [YoutubeUploaderIOS SendMessageUnity:gameObjectToCallBack function:OnFailed param:error.description];
+        //SendMessage(gameObjectToCallBack, OnFailed , @"Authentication failed" );
         // Authentication failed
     } else {
         self.auth = aux_auth;
+        [YoutubeUploaderIOS SendMessageUnity:gameObjectToCallBack function:OnAuth param:@""];
         //[self.controller dismissModalViewControllerAnimated:YES];
-        [self.controller dismissViewControllerAnimated:YES completion:nil];
-        UnitySendMessage(gameObjectToCallBack, OnAuth, "");
     }
+    [self.controller dismissViewControllerAnimated:YES completion:nil];
 }
 /*
 - (void)authentication:(GTMOAuth2Authentication *)auth
@@ -220,10 +219,12 @@ NSString *const OnCancelled = @"OnCancelled";
                                                     // Callback
                                                     if (error == nil) {
                                                         NSLog(@"NO ERROR");
-                                                        UnitySendMessage(gameObjectToCallBack, OnCompleted, "");
+                                                        [YoutubeUploaderIOS SendMessageUnity:gameObjectToCallBack function:OnCompleted param:@""];
+                                                        //SendMessage(gameObjectToCallBack, OnCompleted, @"");
                                                     } else {
                                                         NSLog(@"ERROR");
-                                                        UnitySendMessage(gameObjectToCallBack, OnFailed, error);
+                                                        [YoutubeUploaderIOS SendMessageUnity:gameObjectToCallBack function:OnFailed param:error.description];
+                                                        //SendMessage(gameObjectToCallBack, OnFailed, error);
                                                     }
                                                 }];
         
@@ -237,6 +238,8 @@ NSString *const OnCancelled = @"OnCancelled";
     }
     else{
         NSLog(@"File not found");
+    
+        [YoutubeUploaderIOS SendMessageUnity:gameObjectToCallBack function:OnFailed param:@"File not found"];
     }
 }
 
@@ -250,6 +253,10 @@ NSString *const OnCancelled = @"OnCancelled";
     }
     
     return auth.canAuthorize;
+}
+
++(void) SendMessageUnity:(NSString *)gameObject function:(NSString *)function param:(NSString *) param{
+     UnitySendMessage([gameObject cStringUsingEncoding:NSUTF8StringEncoding], [function cStringUsingEncoding:NSUTF8StringEncoding], [param cStringUsingEncoding:NSUTF8StringEncoding]);
 }
 
 @end
@@ -276,6 +283,7 @@ void authGoogle(const char *clientID,const char *secret,const char *keyForSaveCh
         [uploader signGoogle];
     }
     else{
+        [YoutubeUploaderIOS SendMessageUnity:uploader.gameObjectToCallBack function:OnAuth param:@""];
         NSLog(@"Saved");
     }
 

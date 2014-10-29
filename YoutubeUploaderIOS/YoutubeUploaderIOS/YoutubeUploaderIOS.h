@@ -11,6 +11,12 @@
 
 @class GTMOAuth2Authentication;
 
+/*FOUNDATION_EXPORT NSString *const OnCompleted;
+FOUNDATION_EXPORT NSString *const OnAuth;
+FOUNDATION_EXPORT NSString *const OnFailed;
+FOUNDATION_EXPORT NSString *const OnCompleted;
+FOUNDATION_EXPORT NSString *const OnCancelled;*/
+
 @interface YoutubeUploaderIOS : NSObject{
     
 
@@ -43,6 +49,8 @@
 -(void) uploadYoutube:(NSString *)path title:(NSString *)title description:(NSString *) desc tags:(NSString *)tags;
 
 -(BOOL) isGoogleLogin;
+
++(void) SendMessageUnity:(NSString *)gameObject function:(NSString *)function param:(NSString *) param;
 
 @end
 //void authGoogle();
