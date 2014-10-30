@@ -35,6 +35,11 @@ import com.google.api.services.youtube.model.VideoStatus;
 import com.unity3d.player.UnityPlayer;
 import com.unity3d.player.UnityPlayerActivity;
 
+/**
+ * @author Oscar Crespo Salazar
+ * @author Team Kite
+ * 
+ */
 
 public class YoutubeUploader extends UnityPlayerActivity {
 	
@@ -48,6 +53,8 @@ public class YoutubeUploader extends UnityPlayerActivity {
 	private static final String OnFailed = "OnFailed";
 	
     private static final String VIDEO_FILE_FORMAT = "video/*";
+    
+    private static final int REQUEST_CODE = 1;
     
     public static YoutubeUploader activity;
     
@@ -72,7 +79,7 @@ public class YoutubeUploader extends UnityPlayerActivity {
     }
   
     protected void onActivityResult(final int requestCode, final int resultCode, final Intent data) {
-    	if (requestCode == 1) {
+    	if (requestCode == REQUEST_CODE) {
     		if(resultCode == RESULT_OK){
 	            String accountName = data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
 	            
@@ -140,7 +147,7 @@ public class YoutubeUploader extends UnityPlayerActivity {
     	
     	Intent intent = AccountPicker.newChooseAccountIntent(null, null, new String[]{GoogleAuthUtil.GOOGLE_ACCOUNT_TYPE}, true, "", null, null, null);
     	
-    	activity.startActivityForResult(intent, 1);
+    	activity.startActivityForResult(intent, REQUEST_CODE);
     	
     }
     
