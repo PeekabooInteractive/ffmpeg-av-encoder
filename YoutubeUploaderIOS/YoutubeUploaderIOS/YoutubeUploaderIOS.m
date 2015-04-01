@@ -114,6 +114,7 @@ NSString *const OnCancelled = @"OnCancelled";
                                                     // Callback
                                                     if (error == nil) {
                                                         NSLog(@"NO ERROR");
+                                                        [YoutubeUploaderIOS SendMessageUnity:gameObjectToCallBack function:OnCompleted param:@""];
                                                         [YoutubeUploaderIOS SendMessageUnity:gameObjectToCallBack function:OnCompletedVideoInfo param:uploadedVideo.identifier];
                                                     } else {
                                                         NSLog(@"ERROR");
