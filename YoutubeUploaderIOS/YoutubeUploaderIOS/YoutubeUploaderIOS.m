@@ -25,6 +25,7 @@
 @synthesize gameObjectToCallBack;
 
 NSString *const OnCompleted = @"OnCompleted";
+NSString *const OnCompletedVideoInfo = @"OnCompletedVideoInfo";
 
 NSString *const OnAuth = @"OnAuth";
 NSString *const OnFailed = @"OnFailed";
@@ -113,7 +114,7 @@ NSString *const OnCancelled = @"OnCancelled";
                                                     // Callback
                                                     if (error == nil) {
                                                         NSLog(@"NO ERROR");
-                                                        [YoutubeUploaderIOS SendMessageUnity:gameObjectToCallBack function:OnCompleted param:@""];
+                                                        [YoutubeUploaderIOS SendMessageUnity:gameObjectToCallBack function:OnCompletedVideoInfo param:uploadedVideo.identifier];
                                                     } else {
                                                         NSLog(@"ERROR");
                                                         [YoutubeUploaderIOS SendMessageUnity:gameObjectToCallBack function:OnFailed param:error.description];
