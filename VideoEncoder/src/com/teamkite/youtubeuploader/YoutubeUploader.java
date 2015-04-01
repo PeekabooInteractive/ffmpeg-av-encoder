@@ -48,6 +48,7 @@ public class YoutubeUploader extends UnityPlayerActivity {
 	private static final String TAG = "YoutubeUploader";
 	
 	private static final String OnCompleted = "OnCompleted";
+	private static final String OnCompletedVideoInfo = "OnCompletedVideoInfo";
 	private static final String OnAuth = "OnAuth";
 	private static final String OnCancelled = "OnCancelled";
 	private static final String OnFailed = "OnFailed";
@@ -196,6 +197,9 @@ public class YoutubeUploader extends UnityPlayerActivity {
                  Log.i(TAG,"  - Tags: " + returnedVideo.getSnippet().getTags());
                  Log.i(TAG,"  - Privacy Status: " + returnedVideo.getStatus().getPrivacyStatus());
                  Log.i(TAG,"  - Video Count: " + returnedVideo.getStatistics().getViewCount());
+                 
+         		UnityPlayer.UnitySendMessage(thisGameObjectCallBack, OnCompletedVideoInfo, returnedVideo.getId() );
+                
 
              } catch (GoogleJsonResponseException e) {
              	Log.e(TAG,"GoogleJsonResponseException code: " + e.getDetails().getCode() + " : " + e.getDetails().getMessage());
