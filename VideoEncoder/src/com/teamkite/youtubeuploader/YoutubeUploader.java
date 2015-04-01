@@ -35,6 +35,11 @@ import com.google.api.services.youtube.model.VideoStatus;
 import com.unity3d.player.UnityPlayer;
 import com.unity3d.player.UnityPlayerActivity;
 
+/**
+ * @author Oscar Crespo Salazar
+ * @author Team Kite
+ * 
+ */
 
 public class YoutubeUploader extends UnityPlayerActivity {
 	
@@ -43,11 +48,14 @@ public class YoutubeUploader extends UnityPlayerActivity {
 	private static final String TAG = "YoutubeUploader";
 	
 	private static final String OnCompleted = "OnCompleted";
+	private static final String OnCompletedVideoInfo = "OnCompletedVideoInfo";
 	private static final String OnAuth = "OnAuth";
 	private static final String OnCancelled = "OnCancelled";
 	private static final String OnFailed = "OnFailed";
 	
     private static final String VIDEO_FILE_FORMAT = "video/*";
+    
+    private static final int REQUEST_CODE = 1;
     
     public static YoutubeUploader activity;
     
@@ -72,7 +80,7 @@ public class YoutubeUploader extends UnityPlayerActivity {
     }
   
     protected void onActivityResult(final int requestCode, final int resultCode, final Intent data) {
-    	if (requestCode == 1) {
+    	if (requestCode == REQUEST_CODE) {
     		if(resultCode == RESULT_OK){
 	            String accountName = data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
 	            
@@ -140,7 +148,7 @@ public class YoutubeUploader extends UnityPlayerActivity {
     	
     	Intent intent = AccountPicker.newChooseAccountIntent(null, null, new String[]{GoogleAuthUtil.GOOGLE_ACCOUNT_TYPE}, true, "", null, null, null);
     	
-    	activity.startActivityForResult(intent, 1);
+    	activity.startActivityForResult(intent, REQUEST_CODE);
     	
     }
     
@@ -189,6 +197,9 @@ public class YoutubeUploader extends UnityPlayerActivity {
                  Log.i(TAG,"  - Tags: " + returnedVideo.getSnippet().getTags());
                  Log.i(TAG,"  - Privacy Status: " + returnedVideo.getStatus().getPrivacyStatus());
                  Log.i(TAG,"  - Video Count: " + returnedVideo.getStatistics().getViewCount());
+                 
+         		UnityPlayer.UnitySendMessage(thisGameObjectCallBack, OnCompletedVideoInfo, returnedVideo.getId() );
+                
 
              } catch (GoogleJsonResponseException e) {
              	Log.e(TAG,"GoogleJsonResponseException code: " + e.getDetails().getCode() + " : " + e.getDetails().getMessage());
