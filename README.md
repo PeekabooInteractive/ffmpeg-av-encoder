@@ -17,6 +17,6 @@ License
 -------
 The source code of this project is license under GPLv3
 
-Copyright 2013 Team kite
+Copyright 2014 Team kite
 
 For more information about License, please see file: LICENSE
