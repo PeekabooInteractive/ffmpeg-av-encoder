@@ -11,14 +11,18 @@ How To
 The main utility of this software is the FFMPEG video encoder to unity (Android), to make it wotks properly you need a Android device with OpenGLES3.0 support.
 
 The project is configured to eclipse (you need Android NDK & SDK and Eclipse CDT) and written in C.
+
 The main file is: VideoEncoder/jni/VideoEncoder3.c.
+
 To use it, just import the project: VideoEncoder
+
 
 Also you will find an experimental code to iOS (not working) in: ffmpeg video encoder/
 
 <b>Youtube</b>
 
 The Android version is in: VideoEncoder
+
 The iOS verion: YoutubeUploaderIOS
 
 
